@@ -99,6 +99,7 @@
 .info-row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   padding: 10px 0;
   border-bottom: 1px solid #e0e0e0;
 }
@@ -115,6 +116,7 @@
 .info-value {
   font-weight: 700;
   color: #333;
+  text-align: right;
 }
 
 .clabe-section {
@@ -132,21 +134,21 @@
 
 .clabe-display {
   display: flex;
+  flex-direction: column;
   gap: 10px;
-  align-items: center;
 }
 
 .clabe-number {
-  flex: 1;
   background: white;
   padding: 12px 15px;
   border-radius: 12px;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
   letter-spacing: 1px;
   color: #333;
   text-align: center;
   border: 2px solid #e0e0e0;
+  word-break: break-all;
 }
 
 .copy-clabe-btn {
@@ -158,12 +160,12 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  white-space: nowrap;
+  width: 100%;
+  font-size: 1rem;
 }
 
 .copy-clabe-btn:hover {
   background: #764ba2;
-  transform: scale(1.02);
 }
 
 .copy-clabe-btn.copied {
@@ -229,5 +231,23 @@
   }
   to {
     transform: translateY(0);
+  }
+}
+
+/* Responsive para pantallas más grandes */
+@media (min-width: 500px) {
+  .clabe-display {
+    flex-direction: row;
+    align-items: center;
+  }
+  
+  .clabe-number {
+    flex: 1;
+    font-size: 1.1rem;
+  }
+  
+  .copy-clabe-btn {
+    width: auto;
+    white-space: nowrap;
   }
 }
