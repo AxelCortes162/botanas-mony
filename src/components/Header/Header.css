@@ -1,0 +1,22 @@
+/* src/components/Header/Header.css */
+.header-container {
+  background-color: #ff8a00; /* Naranja Mony */
+  padding: 2rem 1rem;
+  text-align: center;
+  color: white;
+  border-bottom-left-radius: 30px;
+  border-bottom-right-radius: 30px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.header-title {
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 0.2rem;
+}
+
+.header-subtitle {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  font-style: italic;
+}
