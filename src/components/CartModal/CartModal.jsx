@@ -31,16 +31,21 @@ const CartModal = ({ cart, onClose, onRemove, onClear, onSendWhatsApp }) => {
                   <div className="cart-item-details">
                     <div className="cart-item-header">
                       <span className="cart-item-name">{item.name}</span>
+                      {item.size === 'mitad' && (
+                        <span className="cart-item-badge">Mitad</span>
+                      )}
                       {!item.customizable && (
                         <span className="cart-item-badge">Producto fijo</span>
                       )}
                     </div>
-                    {item.customizable && (
+                    
+                    {/* Mostrar ingredientes solo si es personalizable */}
+                    {item.customizable && item.customIngredients && item.customIngredients.length > 0 && (
                       <div className="cart-item-customization">
                         <small>🥗 {item.customIngredients.join(', ')}</small>
-                        <small>✨ {item.customExtras.salsa}, {item.customExtras.cacahuate}, {item.customExtras.gomita}</small>
                       </div>
                     )}
+                    
                     <span className="cart-item-price">${item.price}</span>
                   </div>
                   <button 
