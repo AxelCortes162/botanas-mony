@@ -23,7 +23,8 @@ import {
   saveProducts, 
   listenToStoreStatus, 
   listenToProducts,
-  saveDeliveryConfig
+  saveDeliveryConfig,
+  listenToDeliveryConfig
 } from './firebase';
 
 function App() {
@@ -48,6 +49,13 @@ function App() {
         saveStoreStatus(true);
         saveProducts(initialProducts);
         setFirebaseConnected(true);
+        listenToDeliveryConfig((updatedConfig) => {
+          if (updatedConfig) {
+            setDeliverySettings(updatedConfig);
+            // Opcional: Actualizar localStorage para persistencia offline
+            localStorage.setItem('deliverySettings', JSON.stringify(updatedConfig));
+          }
+        });
       } catch (error) {
         console.log('Firebase no disponible, usando datos locales');
         setFirebaseConnected(false);
