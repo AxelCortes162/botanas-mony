@@ -133,7 +133,7 @@ export const deliveryConfig = {
   pickupEnabled: true,
   deliveryEnabled: true,
   deliveryCost: 30,
-  address: "Calle Principal #123, Col. Centro", // Dirección del puesto
+  address: "U.H.Lindavista Vallejo, Mzn 2. Las Curvas", // Dirección del puesto
   scheduleInterval: 20, // minutos entre horarios
   openingTime: "10:00",
   closingTime: "20:00",
