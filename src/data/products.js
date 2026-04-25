@@ -30,7 +30,7 @@ export const productsData = [
     description: "Chicharrón de harina preparado con ingredientes frescos",
     baseIngredients: [
       "Crema", "Col", "Cueritos", "Jitomate", "Aguacate", "Limón", "Sal", 
-      "Salsa Valentina" // Salsa por defecto
+      "Salsa Valentina", "Tajín"
     ],
     category: "Preparados",
     customizable: true
@@ -42,8 +42,10 @@ export const productsData = [
     hasHalfOption: false,
     description: "Doritos preparados estilo loco",
     baseIngredients: [
-      "Jícama", "Zanahoria", "Pepino", "Cacahuate Japonés", "Gomitas Gusano", 
-      "Limón", "Sal", "Salsa Valentina"
+      "Jícama", "Zanahoria", "Pepino", "Cueritos", "Cacahuate Japonés", 
+      "Cacahuate Queso", "Cacahuate Enchilado", "Gomitas Gusano", 
+      "Gomitas Pandita", "Chamoy", "Miguelito", "Tajín",
+      "Limón", "Sal", "Salsa Valentina", "Tajín"
     ],
     category: "Preparados",
     customizable: true
@@ -99,8 +101,9 @@ export const productsData = [
     hasHalfOption: false,
     description: "Pepino preparado estilo loco",
     baseIngredients: [
-      "Chamoy", "Miguelito", "Cacahuate Japonés", "Takis", "Gomitas Gusano", 
-      "Limón", "Sal", "Salsa Valentina"
+      "Chamoy", "Miguelito", "Cacahuate Japonés", "Cacahuate Queso", 
+      "Cacahuate Enchilado", "Takis", "Gomitas Gusano", "Gomitas Pandita",
+      "Limón", "Sal", "Salsa Valentina", "Tajín"
     ],
     category: "Preparados",
     customizable: true

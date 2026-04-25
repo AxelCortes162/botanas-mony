@@ -1,4 +1,4 @@
-// IngredientModal.jsx - VERSIÓN SIMPLIFICADA
+// src/components/IngredientModal/IngredientModal.jsx
 import { useState, useEffect } from 'react';
 import './IngredientModal.css';
 
@@ -6,11 +6,15 @@ const IngredientModal = ({ product, allIngredients, onClose, onConfirm }) => {
   const [selectedIngredients, setSelectedIngredients] = useState([]);
   const [selectedSize, setSelectedSize] = useState('entero');
 
+  const EXTRA_COST = 2; // $2 por cada ingrediente extra
+
   // Inicializar ingredientes base cuando el producto cambia
   useEffect(() => {
     if (product?.baseIngredients) {
       setSelectedIngredients([...product.baseIngredients]);
     }
+    // Resetear tamaño a entero cuando cambia el producto
+    setSelectedSize('entero');
   }, [product]);
 
   const handleCheckboxChange = (ingredient) => {
@@ -21,7 +25,34 @@ const IngredientModal = ({ product, allIngredients, onClose, onConfirm }) => {
     }
   };
 
-  // Agrupar ingredientes por categorías para mejor organización visual
+  // Calcular ingredientes extra y removidos
+  const baseIngredientsList = product?.baseIngredients || [];
+  
+  const addedExtras = selectedIngredients.filter(
+    ing => !baseIngredientsList.includes(ing)
+  );
+  
+  const removedBase = baseIngredientsList.filter(
+    ing => !selectedIngredients.includes(ing)
+  );
+
+  // Calcular extras netos
+  const netExtras = Math.max(0, addedExtras.length - removedBase.length);
+  
+  // Calcular precio base según el tamaño seleccionado
+  const getBasePrice = () => {
+    if (!product) return 0;
+    if (selectedSize === 'mitad' && product.hasHalfOption) {
+      return product.halfPrice;
+    }
+    return product.price;
+  };
+
+  const basePrice = getBasePrice();
+  const extraCharges = netExtras * EXTRA_COST;
+  const finalPrice = basePrice + extraCharges;
+
+  // Agrupar ingredientes por categorías
   const ingredientCategories = {
     "🥬 Vegetales": ["Jícama", "Zanahoria", "Pepino", "Betabel", "Col", "Jitomate", "Aguacate"],
     "🍖 Proteínas": ["Cueritos"],
@@ -32,14 +63,7 @@ const IngredientModal = ({ product, allIngredients, onClose, onConfirm }) => {
     "🔥 Botanas y Condimentos": ["Takis", "Chamoy", "Miguelito", "Tajín", "Limón", "Sal"]
   };
 
-  // Calcular precio según tamaño
-  const currentPrice = selectedSize === 'mitad' && product.hasHalfOption 
-    ? product.halfPrice 
-    : product.price;
-
   if (!product) return null;
-
-  const baseIngredientsList = product?.baseIngredients || [];
 
   return (
     <div className="modal-overlay">
@@ -69,15 +93,60 @@ const IngredientModal = ({ product, allIngredients, onClose, onConfirm }) => {
           </div>
         )}
 
+        {/* Resumen de cambios y precios */}
+        <div className="price-summary">
+          <div className="price-row">
+            <span>Precio base:</span>
+            <span>${basePrice}</span>
+          </div>
+          
+          {addedExtras.length > 0 && (
+            <div className="price-row extra-added">
+              <span>Ingredientes agregados: {addedExtras.length}</span>
+              <span className="extra-detail">{addedExtras.join(', ')}</span>
+            </div>
+          )}
+          
+          {removedBase.length > 0 && (
+            <div className="price-row extra-removed">
+              <span>Ingredientes removidos: {removedBase.length}</span>
+              <span className="extra-detail">{removedBase.join(', ')}</span>
+            </div>
+          )}
+          
+          {netExtras > 0 && (
+            <div className="price-row extra-charge">
+              <span>Cargo extra ({netExtras} × ${EXTRA_COST}):</span>
+              <span>+${extraCharges}</span>
+            </div>
+          )}
+          
+          {netExtras === 0 && addedExtras.length > 0 && removedBase.length > 0 && (
+            <div className="price-row free-exchange">
+              <span>✨ ¡Intercambio sin costo!</span>
+              <span>$0</span>
+            </div>
+          )}
+          
+          <div className="price-row total-row">
+            <span>Total:</span>
+            <span>${finalPrice}</span>
+          </div>
+        </div>
+
         {/* Todos los ingredientes organizados por categorías */}
         <div className="ingredients-container">
           <p className="section-label">
             🥗 Ingredientes:
-            <span className="ingredient-hint">Marca/desmarca según tu gusto</span>
+            <span className="ingredient-hint">
+              {netExtras > 0 ? 
+                `+$${EXTRA_COST} por extra (${netExtras} extra${netExtras > 1 ? 's' : ''})` : 
+                'Puedes intercambiar 1 a 1 sin costo'
+              }
+            </span>
           </p>
           
           {Object.entries(ingredientCategories).map(([category, ingredients]) => {
-            // Filtrar ingredientes que existen en allIngredients
             const availableIngredients = ingredients.filter(ing => 
               allIngredients.includes(ing)
             );
@@ -90,18 +159,22 @@ const IngredientModal = ({ product, allIngredients, onClose, onConfirm }) => {
                 <div className="checkbox-grid">
                   {availableIngredients.map(ing => {
                     const isBase = baseIngredientsList.includes(ing);
+                    const isSelected = selectedIngredients.includes(ing);
+                    const isExtra = isSelected && !isBase;
+                    
                     return (
                       <label 
                         key={ing} 
-                        className={`checkbox-item ${isBase ? 'base-ingredient' : 'extra-ingredient'}`}
+                        className={`checkbox-item ${isBase ? 'base-ingredient' : ''} ${isExtra ? 'extra-selected' : ''}`}
                       >
                         <input 
                           type="checkbox" 
-                          checked={selectedIngredients.includes(ing)}
+                          checked={isSelected}
                           onChange={() => handleCheckboxChange(ing)}
                         />
                         <span>{ing}</span>
                         {isBase && <span className="base-badge">Base</span>}
+                        {isExtra && <span className="extra-cost-badge">+$2</span>}
                       </label>
                     );
                   })}
@@ -116,17 +189,21 @@ const IngredientModal = ({ product, allIngredients, onClose, onConfirm }) => {
           <p className="summary-title">✅ Ingredientes seleccionados:</p>
           <div className="selected-tags">
             {selectedIngredients.length > 0 ? (
-              selectedIngredients.map(ing => (
-                <span key={ing} className="ingredient-tag">
-                  {ing}
-                  <button 
-                    className="remove-tag"
-                    onClick={() => handleCheckboxChange(ing)}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))
+              selectedIngredients.map(ing => {
+                const isBase = baseIngredientsList.includes(ing);
+                return (
+                  <span key={ing} className={`ingredient-tag ${!isBase ? 'extra-tag' : ''}`}>
+                    {ing}
+                    {!isBase && <span className="cost-indicator">+$2</span>}
+                    <button 
+                      className="remove-tag"
+                      onClick={() => handleCheckboxChange(ing)}
+                    >
+                      ×
+                    </button>
+                  </span>
+                );
+              })
             ) : (
               <p className="no-ingredients">Ningún ingrediente seleccionado</p>
             )}
@@ -135,9 +212,9 @@ const IngredientModal = ({ product, allIngredients, onClose, onConfirm }) => {
 
         <button 
           className="confirm-button" 
-          onClick={() => onConfirm(product, selectedIngredients, selectedSize)}
+          onClick={() => onConfirm(product, selectedIngredients, selectedSize, finalPrice)}
         >
-          Añadir al pedido - ${currentPrice}
+          Añadir al pedido - ${finalPrice}
         </button>
       </div>
     </div>

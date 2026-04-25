@@ -1,0 +1,444 @@
+/* src/components/AdminModal/AdminModal.css */
+.admin-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  z-index: 2000;
+  animation: fadeIn 0.3s ease;
+}
+
+.admin-modal-content {
+  background: white;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  border-radius: 30px 30px 0 0;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease;
+}
+
+.admin-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 25px;
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  border-radius: 30px 30px 0 0;
+  color: white;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.admin-modal-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-modal-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  font-size: 24px;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.admin-modal-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
+}
+
+/* Login */
+.admin-login {
+  padding: 40px 30px;
+  text-align: center;
+}
+
+.login-icon {
+  font-size: 4rem;
+  margin-bottom: 15px;
+}
+
+.login-text {
+  color: #666;
+  margin-bottom: 25px;
+}
+
+.login-input {
+  width: 90%;
+  padding: 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 15px;
+  font-size: 1.1rem;
+  text-align: center;
+  margin-bottom: 15px;
+  transition: border-color 0.3s;
+}
+
+.login-input:focus {
+  border-color: #2c3e50;
+  outline: none;
+}
+
+.login-message {
+  color: #e74c3c;
+  margin: 10px 0;
+  font-size: 0.9rem;
+}
+
+.login-button {
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  color: white;
+  border: none;
+  border-radius: 15px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.login-button:hover {
+  transform: translateY(-2px);
+}
+
+/* Tabs */
+.admin-tabs {
+  display: flex;
+  padding: 15px;
+  gap: 8px;
+  background: #f8f9fa;
+  border-bottom: 2px solid #e0e0e0;
+  position: sticky;
+  top: 70px;
+  z-index: 5;
+}
+
+.admin-tab {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: white;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #666;
+}
+
+.admin-tab.active {
+  background: #2c3e50;
+  color: white;
+  box-shadow: 0 4px 15px rgba(44, 62, 80, 0.3);
+}
+
+.admin-message {
+  margin: 15px;
+  padding: 12px;
+  background: #d4edda;
+  color: #155724;
+  border-radius: 10px;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Contenido de tabs */
+.admin-tab-content {
+  padding: 20px;
+}
+
+.admin-tab-content h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+/* Estado de tienda */
+.store-status-card {
+  background: #f8f9fa;
+  border-radius: 15px;
+  padding: 25px;
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.status-dot {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.status-indicator.open .status-dot {
+  background: #4CAF50;
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+}
+
+.status-indicator.closed .status-dot {
+  background: #e74c3c;
+  box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+}
+
+.status-text {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.status-description {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.toggle-store-btn {
+  padding: 15px 30px;
+  border: none;
+  border-radius: 15px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggle-store-btn.open {
+  background: #4CAF50;
+  color: white;
+}
+
+.toggle-store-btn.close {
+  background: #e74c3c;
+  color: white;
+}
+
+.toggle-store-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Info grid */
+.admin-info {
+  margin-top: 20px;
+}
+
+.admin-info h4 {
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.info-card {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.info-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.info-value {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #2c3e50;
+}
+
+/* Precios */
+.prices-list {
+  margin-bottom: 20px;
+}
+
+.price-item {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 12px;
+}
+
+.price-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.price-item-name {
+  font-weight: 700;
+  color: #333;
+}
+
+.price-item-category {
+  font-size: 0.75rem;
+  background: #e0e0e0;
+  padding: 3px 8px;
+  border-radius: 10px;
+  color: #666;
+}
+
+.price-inputs {
+  display: flex;
+  gap: 12px;
+}
+
+.price-input-group {
+  flex: 1;
+}
+
+.price-input-group label {
+  display: block;
+  font-size: 0.8rem;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.input-with-prefix {
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.prefix {
+  padding: 10px;
+  background: #f0f0f0;
+  font-weight: 700;
+  color: #666;
+}
+
+.input-with-prefix input {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.input-with-prefix input:focus {
+  outline: none;
+}
+
+.save-button {
+  width: 100%;
+  padding: 15px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 15px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.save-button:hover {
+  background: #45a049;
+  transform: translateY(-2px);
+}
+
+/* Ingredientes */
+.ingredients-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.product-ingredients-card {
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.product-ingredients-card h5 {
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.base-ingredients-tags,
+.all-ingredients-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.base-ingredient-tag {
+  background: #e8f5e9;
+  color: #2e7d32;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid #4CAF50;
+}
+
+.available-ingredient-tag {
+  background: #fff5eb;
+  color: #ff8a00;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.all-ingredients-section h4 {
+  margin-bottom: 12px;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}

@@ -1,12 +1,48 @@
-/* src/index.css */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* Agregar a App.css */
+.admin-access-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.1);
+  border: none;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  opacity: 0.3;
+  transition: opacity 0.3s;
 }
 
-body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f9f9f9;
-  color: #333;
+.admin-access-btn:hover {
+  opacity: 1;
+}
+
+.store-closed-banner {
+  background: #e74c3c;
+  color: white;
+  padding: 20px;
+  text-align: center;
+  margin: 10px 15px;
+  border-radius: 15px;
+}
+
+.store-closed-banner span {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.store-closed-banner p {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.store-closed-banner small {
+  opacity: 0.8;
 }

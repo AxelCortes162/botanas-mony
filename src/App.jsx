@@ -1,5 +1,5 @@
-// App.jsx
-import { useState } from 'react';
+// App.jsx - Agregar sistema de administración
+import { useState, useEffect } from 'react';
 import './App.css';
 
 // Importación de componentes
@@ -8,17 +8,39 @@ import ProductCard from './components/ProductCard/ProductCard';
 import IngredientModal from './components/IngredientModal/IngredientModal';
 import CartModal from './components/CartModal/CartModal';
 import TransferModal from './components/TransferModal/TransferModal';
-import { productsData, allIngredients, paymentData } from './data/products';
+import AdminModal from './components/AdminModal/AdminModal';
+import { productsData as initialProducts, allIngredients, paymentData } from './data/products';
 
 function App() {
   const [activeProduct, setActiveProduct] = useState(null);
   const [cart, setCart] = useState([]);
   const [showCart, setShowCart] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
+  const [isStoreOpen, setIsStoreOpen] = useState(true);
+  const [products, setProducts] = useState(initialProducts);
+  
+  // Cargar estado de la tienda desde localStorage
+  useEffect(() => {
+    const savedState = localStorage.getItem('storeOpen');
+    if (savedState !== null) {
+      setIsStoreOpen(JSON.parse(savedState));
+    }
+    
+    const savedProducts = localStorage.getItem('products');
+    if (savedProducts) {
+      setProducts(JSON.parse(savedProducts));
+    }
+  }, []);
 
   const payment = paymentData;
 
   const handleAddClick = (product) => {
+    if (!isStoreOpen) {
+      alert('🛑 La tienda está cerrada en este momento. Vuelve pronto.');
+      return;
+    }
+    
     if (!product.customizable) {
       handleDirectAdd(product);
     } else {
@@ -39,11 +61,7 @@ function App() {
     setCart([...cart, newItem]);
   };
 
-  const handleConfirmOrder = (product, ingredients, size) => {
-    const finalPrice = size === 'mitad' && product.hasHalfOption 
-      ? product.halfPrice 
-      : product.price;
-      
+  const handleConfirmOrder = (product, ingredients, size, finalPrice) => {
     const newItem = {
       id: product.id,
       name: product.name,
@@ -98,49 +116,81 @@ function App() {
     window.open(url, '_blank');
   };
 
+  // Funciones de administración
+  const handleToggleStore = () => {
+    const newState = !isStoreOpen;
+    setIsStoreOpen(newState);
+    localStorage.setItem('storeOpen', newState);
+  };
+
+  const handleUpdatePrices = (updatedProducts) => {
+    setProducts(updatedProducts);
+    localStorage.setItem('products', JSON.stringify(updatedProducts));
+  };
+
   const totalItems = cart.length;
   const totalPrice = cart.reduce((acc, item) => acc + item.price, 0);
 
   return (
     <div className="app-container">
-      <Header />
+      <Header isStoreOpen={isStoreOpen} />
+
+      {/* Botón de administrador (sutil) */}
+      <button 
+        className="admin-access-btn"
+        onClick={() => setShowAdmin(true)}
+        title="Administración"
+      >
+        ⚙️
+      </button>
+
+      {!isStoreOpen && (
+        <div className="store-closed-banner">
+          <span>🔴</span>
+          <p>Tienda cerrada temporalmente</p>
+          <small>Volveremos pronto</small>
+        </div>
+      )}
 
       <main className="product-list">
-        {productsData.map(product => (
+        {products.map(product => (
           <ProductCard 
             key={product.id} 
             product={product} 
-            onAddClick={handleAddClick} 
+            onAddClick={handleAddClick}
+            disabled={!isStoreOpen}
           />
         ))}
       </main>
 
       {/* Botones flotantes */}
-      <div className="floating-buttons">
-        <button 
-          className="floating-btn transfer-btn"
-          onClick={() => setShowTransfer(true)}
-        >
-          <span>💳</span>
-          <span className="btn-label">Transferencia</span>
-        </button>
+      {isStoreOpen && (
+        <div className="floating-buttons">
+          <button 
+            className="floating-btn transfer-btn"
+            onClick={() => setShowTransfer(true)}
+          >
+            <span>💳</span>
+            <span className="btn-label">Transferencia</span>
+          </button>
 
-        <button 
-          className="floating-btn cart-btn"
-          onClick={() => setShowCart(true)}
-        >
-          <span>🛒</span>
-          {totalItems > 0 && (
-            <span className="cart-badge">{totalItems}</span>
-          )}
-          <span className="btn-label">Carrito</span>
-          {totalItems > 0 && (
-            <span className="cart-total-badge">${totalPrice}</span>
-          )}
-        </button>
-      </div>
+          <button 
+            className="floating-btn cart-btn"
+            onClick={() => setShowCart(true)}
+          >
+            <span>🛒</span>
+            {totalItems > 0 && (
+              <span className="cart-badge">{totalItems}</span>
+            )}
+            <span className="btn-label">Carrito</span>
+            {totalItems > 0 && (
+              <span className="cart-total-badge">${totalPrice}</span>
+            )}
+          </button>
+        </div>
+      )}
 
-      {/* Modal de Personalización */}
+      {/* Modales */}
       {activeProduct && activeProduct.customizable && (
         <IngredientModal 
           product={activeProduct}
@@ -150,7 +200,6 @@ function App() {
         />
       )}
 
-      {/* Modal del Carrito */}
       {showCart && (
         <CartModal 
           cart={cart}
@@ -161,11 +210,21 @@ function App() {
         />
       )}
 
-      {/* Modal de Transferencia */}
       {showTransfer && (
         <TransferModal 
           paymentData={paymentData}
           onClose={() => setShowTransfer(false)}
+        />
+      )}
+
+      {showAdmin && (
+        <AdminModal 
+          products={products}
+          allIngredients={allIngredients}
+          isOpen={isStoreOpen}
+          onToggleStore={handleToggleStore}
+          onUpdatePrices={handleUpdatePrices}
+          onClose={() => setShowAdmin(false)}
         />
       )}
     </div>
