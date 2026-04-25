@@ -45,7 +45,7 @@ export const productsData = [
       "Jícama", "Zanahoria", "Pepino", "Cueritos", "Cacahuate Japonés", 
       "Cacahuate Queso", "Cacahuate Enchilado", "Gomitas Gusano", 
       "Gomitas Pandita", "Chamoy", "Miguelito", "Tajín",
-      "Limón", "Sal", "Salsa Valentina", "Tajín"
+      "Limón", "Sal", "Salsa Valentina"
     ],
     category: "Preparados",
     customizable: true
