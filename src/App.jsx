@@ -2,35 +2,47 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 
-// Importación de componentes
+// Componentes
 import Header from './components/Header/Header';
 import ProductCard from './components/ProductCard/ProductCard';
 import IngredientModal from './components/IngredientModal/IngredientModal';
 import CartModal from './components/CartModal/CartModal';
 import TransferModal from './components/TransferModal/TransferModal';
 import AdminModal from './components/AdminModal/AdminModal';
-import { productsData as initialProducts, allIngredients, paymentData } from './data/products';
+import DeliveryModal from './components/DeliveryModal/DeliveryModal';
+
+// Datos y Firebase
+import { 
+  productsData as initialProducts, 
+  allIngredients, 
+  paymentData, 
+  deliveryConfig as initialDeliveryConfig 
+} from './data/products';
 import { 
   saveStoreStatus, 
   saveProducts, 
   listenToStoreStatus, 
-  listenToProducts 
+  listenToProducts,
+  saveDeliveryConfig
 } from './firebase';
 
 function App() {
+  // Estados principales
   const [activeProduct, setActiveProduct] = useState(null);
   const [cart, setCart] = useState([]);
   const [showCart, setShowCart] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showDelivery, setShowDelivery] = useState(false);
   const [isStoreOpen, setIsStoreOpen] = useState(true);
   const [products, setProducts] = useState(initialProducts);
+  const [deliverySettings, setDeliverySettings] = useState(initialDeliveryConfig);
   const [loading, setLoading] = useState(true);
   const [firebaseConnected, setFirebaseConnected] = useState(false);
 
-  // Inicializar Firebase y escuchar cambios
+  // Inicializar Firebase y cargar configuración
   useEffect(() => {
-    // Intentar inicializar datos en Firebase
+    // Intentar inicializar Firebase
     const initFirebase = async () => {
       try {
         saveStoreStatus(true);
@@ -53,7 +65,6 @@ function App() {
         setLoading(false);
       });
 
-      // Escuchar cambios en productos desde Firebase
       listenToProducts((updatedProducts) => {
         if (updatedProducts && updatedProducts.length > 0) {
           setProducts(updatedProducts);
@@ -63,10 +74,17 @@ function App() {
       console.log('Usando datos locales');
       setLoading(false);
     }
+
+    // Cargar configuración de entrega del localStorage
+    const savedDelivery = localStorage.getItem('deliverySettings');
+    if (savedDelivery) {
+      setDeliverySettings(JSON.parse(savedDelivery));
+    }
   }, []);
 
   const payment = paymentData;
 
+  // Manejo de agregar productos
   const handleAddClick = (product) => {
     if (!isStoreOpen) {
       alert('🛑 La tienda está cerrada en este momento. Vuelve pronto.');
@@ -108,6 +126,7 @@ function App() {
     setActiveProduct(null);
   };
 
+  // Carrito
   const removeFromCart = (uniqueId) => {
     setCart(cart.filter(item => item.uniqueId !== uniqueId));
   };
@@ -119,8 +138,11 @@ function App() {
     }
   };
 
-  const sendWhatsApp = () => {
-    const total = cart.reduce((acc, item) => acc + item.price, 0);
+  const totalPrice = cart.reduce((acc, item) => acc + item.price, 0);
+
+  // WhatsApp con información de entrega
+  const handleSendWhatsApp = (deliveryInfo) => {
+    const total = deliveryInfo ? deliveryInfo.finalTotal : totalPrice;
     let message = `🍿 *NUEVO PEDIDO - BOTANAS MONY* 🍿\n\n`;
     message += `¡Hola Mony! Quiero hacer un pedido:\n\n`;
     
@@ -133,19 +155,34 @@ function App() {
       
       if (item.customizable && item.customIngredients.length > 0) {
         message += `   🥗 Ingredientes: ${item.customIngredients.join(', ')}\n`;
-      } else if (!item.customizable) {
-        message += `   ⭐ Producto sin personalizar\n`;
       }
       message += `\n`;
     });
 
     message += `━━━━━━━━━━━━━━━━━━\n`;
-    message += `💰 *TOTAL: $${total}*\n`;
+    
+    if (deliveryInfo) {
+      message += `🛵 *Método:* ${deliveryInfo.method === 'pickup' ? 'Recoger en puesto' : 'Envío a domicilio'}\n`;
+      message += `📍 *Dirección:* ${deliveryInfo.address}\n`;
+      message += `🕐 *Horario:* ${deliveryInfo.time}\n`;
+      if (deliveryInfo.deliveryCost > 0) {
+        message += `💸 *Envío:* $${deliveryInfo.deliveryCost}\n`;
+      }
+      message += `💰 *TOTAL: $${total}*\n`;
+    } else {
+      message += `💰 *TOTAL: $${totalPrice}*\n`;
+    }
+    
     message += `━━━━━━━━━━━━━━━━━━\n\n`;
     message += `✅ Confirmo que haré transferencia`;
 
     const url = `https://wa.me/52${payment.whatsapp}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
+    
+    // Limpiar carrito después de enviar
+    if (deliveryInfo) {
+      setCart([]);
+    }
   };
 
   // Funciones de administración
@@ -153,29 +190,31 @@ function App() {
     const newState = !isStoreOpen;
     setIsStoreOpen(newState);
     
-    // Guardar en Firebase si está disponible
     if (firebaseConnected) {
       saveStoreStatus(newState);
     }
-    
-    // También guardar en localStorage como respaldo
     localStorage.setItem('storeOpen', JSON.stringify(newState));
   };
 
   const handleUpdatePrices = (updatedProducts) => {
     setProducts(updatedProducts);
     
-    // Guardar en Firebase si está disponible
     if (firebaseConnected) {
       saveProducts(updatedProducts);
     }
-    
-    // También guardar en localStorage como respaldo
     localStorage.setItem('products', JSON.stringify(updatedProducts));
   };
 
+  const handleUpdateDeliverySettings = (settings) => {
+    setDeliverySettings(settings);
+    
+    if (firebaseConnected) {
+      saveDeliveryConfig(settings);
+    }
+    localStorage.setItem('deliverySettings', JSON.stringify(settings));
+  };
+
   const totalItems = cart.length;
-  const totalPrice = cart.reduce((acc, item) => acc + item.price, 0);
 
   // Pantalla de carga
   if (loading) {
@@ -195,7 +234,7 @@ function App() {
     <div className="app-container">
       <Header isStoreOpen={isStoreOpen} />
 
-      {/* Botón de administrador (sutil) */}
+      {/* Botón de administrador */}
       <button 
         className="admin-access-btn"
         onClick={() => setShowAdmin(true)}
@@ -214,7 +253,7 @@ function App() {
         </div>
       )}
 
-      {/* Indicador de conexión Firebase */}
+      {/* Indicador de conexión */}
       {!firebaseConnected && (
         <div className="offline-banner">
           <span>📡</span>
@@ -234,7 +273,7 @@ function App() {
         ))}
       </main>
 
-      {/* Botones flotantes */}
+      {/* Botones flotantes (solo si la tienda está abierta) */}
       {isStoreOpen && (
         <div className="floating-buttons">
           <button 
@@ -280,7 +319,23 @@ function App() {
           onClose={() => setShowCart(false)}
           onRemove={removeFromCart}
           onClear={clearCart}
-          onSendWhatsApp={sendWhatsApp}
+          onSendWhatsApp={() => {
+            setShowCart(false);
+            setShowDelivery(true);
+          }}
+        />
+      )}
+
+      {/* Modal de Entrega */}
+      {showDelivery && (
+        <DeliveryModal 
+          config={deliverySettings}
+          totalPrice={totalPrice}
+          onClose={() => setShowDelivery(false)}
+          onConfirm={(deliveryInfo) => {
+            setShowDelivery(false);
+            handleSendWhatsApp(deliveryInfo);
+          }}
         />
       )}
 
@@ -300,6 +355,8 @@ function App() {
           isOpen={isStoreOpen}
           onToggleStore={handleToggleStore}
           onUpdatePrices={handleUpdatePrices}
+          onUpdateDeliverySettings={handleUpdateDeliverySettings}
+          deliverySettings={deliverySettings}
           onClose={() => setShowAdmin(false)}
         />
       )}

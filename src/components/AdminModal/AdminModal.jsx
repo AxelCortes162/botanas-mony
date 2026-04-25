@@ -8,6 +8,8 @@ const AdminModal = ({
   isOpen, 
   onToggleStore, 
   onUpdatePrices,
+  onUpdateDeliverySettings,
+  deliverySettings,
   onClose 
 }) => {
   const [password, setPassword] = useState('');
@@ -15,12 +17,17 @@ const AdminModal = ({
   const [activeTab, setActiveTab] = useState('status');
   const [editedProducts, setEditedProducts] = useState([...products]);
   const [message, setMessage] = useState('');
+  
+  // Estados para ingredientes
   const [newIngredient, setNewIngredient] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [editingProduct, setEditingProduct] = useState(null);
   const [tempIngredients, setTempIngredients] = useState([]);
   const [localIngredients, setLocalIngredients] = useState([...allIngredients]);
   const [localProducts, setLocalProducts] = useState([...products]);
+  
+  // Estados para configuración de entrega
+  const [localDeliverySettings, setLocalDeliverySettings] = useState({...deliverySettings});
 
   const ADMIN_PASSWORD = 'mony2024';
 
@@ -53,65 +60,89 @@ const AdminModal = ({
     onToggleStore();
   };
 
+  // Funciones para ingredientes
   const handleAddIngredient = () => {
     if (newIngredient.trim() && !localIngredients.includes(newIngredient.trim())) {
-        const updatedIngredients = [...localIngredients, newIngredient.trim()];
-        setLocalIngredients(updatedIngredients);
-        setNewIngredient('');
-        setSelectedCategory('');
-        setMessage('✅ Ingrediente agregado correctamente');
-        setTimeout(() => setMessage(''), 3000);
+      const updatedIngredients = [...localIngredients, newIngredient.trim()];
+      setLocalIngredients(updatedIngredients);
+      setNewIngredient('');
+      setSelectedCategory('');
+      setMessage('✅ Ingrediente agregado correctamente');
+      setTimeout(() => setMessage(''), 3000);
     } else if (localIngredients.includes(newIngredient.trim())) {
-        setMessage('⚠️ Este ingrediente ya existe');
-        setTimeout(() => setMessage(''), 3000);
+      setMessage('⚠️ Este ingrediente ya existe');
+      setTimeout(() => setMessage(''), 3000);
     }
-    };
+  };
 
-    const handleRemoveIngredient = (productId, ingredient) => {
+  const handleRemoveIngredient = (productId, ingredient) => {
     if (confirm(`¿Quitar "${ingredient}" de los ingredientes base?`)) {
-        const updatedProducts = localProducts.map(product => {
+      const updatedProducts = localProducts.map(product => {
         if (product.id === productId && product.baseIngredients) {
-            return {
+          return {
             ...product,
             baseIngredients: product.baseIngredients.filter(ing => ing !== ingredient)
-            };
+          };
         }
         return product;
-        });
-        setLocalProducts(updatedProducts);
-        setMessage('✅ Ingrediente removido');
-        setTimeout(() => setMessage(''), 3000);
+      });
+      setLocalProducts(updatedProducts);
+      setMessage('✅ Ingrediente removido');
+      setTimeout(() => setMessage(''), 3000);
     }
-    };
+  };
 
-    const startEditingIngredients = (product) => {
+  const startEditingIngredients = (product) => {
     setEditingProduct(product.id);
     setTempIngredients([...(product.baseIngredients || [])]);
-    };
+  };
 
-    const toggleTempIngredient = (ingredient) => {
+  const toggleTempIngredient = (ingredient) => {
     if (tempIngredients.includes(ingredient)) {
-        setTempIngredients(tempIngredients.filter(i => i !== ingredient));
+      setTempIngredients(tempIngredients.filter(i => i !== ingredient));
     } else {
-        setTempIngredients([...tempIngredients, ingredient]);
+      setTempIngredients([...tempIngredients, ingredient]);
     }
-    };
+  };
 
-    const handleSaveIngredients = (productId) => {
+  const handleSaveIngredients = (productId) => {
     const updatedProducts = localProducts.map(product => {
-        if (product.id === productId) {
+      if (product.id === productId) {
         return {
-            ...product,
-            baseIngredients: [...tempIngredients]
+          ...product,
+          baseIngredients: [...tempIngredients]
         };
-        }
-        return product;
+      }
+      return product;
     });
     setLocalProducts(updatedProducts);
     setEditingProduct(null);
     setMessage('✅ Ingredientes base actualizados');
     setTimeout(() => setMessage(''), 3000);
+  };
+
+  // Funciones para configuración de entrega
+  const toggleDeliverySetting = (key) => {
+    const updated = {
+      ...localDeliverySettings,
+      [key]: !localDeliverySettings[key]
     };
+    setLocalDeliverySettings(updated);
+  };
+
+  const updateDeliverySetting = (key, value) => {
+    const updated = {
+      ...localDeliverySettings,
+      [key]: value
+    };
+    setLocalDeliverySettings(updated);
+  };
+
+  const handleSaveDeliverySettings = () => {
+    onUpdateDeliverySettings(localDeliverySettings);
+    setMessage('✅ Configuración de entrega actualizada');
+    setTimeout(() => setMessage(''), 3000);
+  };
 
   if (!isAuthenticated) {
     return (
@@ -176,6 +207,12 @@ const AdminModal = ({
             onClick={() => setActiveTab('ingredients')}
           >
             🥗 Ingredientes
+          </button>
+          <button 
+            className={`admin-tab ${activeTab === 'delivery' ? 'active' : ''}`}
+            onClick={() => setActiveTab('delivery')}
+          >
+            🚚 Entrega
           </button>
         </div>
 
@@ -287,15 +324,14 @@ const AdminModal = ({
 
         {/* Tab: Ingredientes */}
         {activeTab === 'ingredients' && (
-        <div className="admin-tab-content">
+          <div className="admin-tab-content">
             <h3>Gestión de Ingredientes</h3>
             
             <div className="ingredients-manager">
-            {/* Agregar nuevo ingrediente */}
-            <div className="add-ingredient-section">
+              <div className="add-ingredient-section">
                 <h4>➕ Agregar Nuevo Ingrediente</h4>
                 <div className="add-ingredient-form">
-                <input
+                  <input
                     id="new-ingredient"
                     name="new-ingredient"
                     type="text"
@@ -303,15 +339,14 @@ const AdminModal = ({
                     placeholder="Nombre del ingrediente"
                     value={newIngredient}
                     onChange={(e) => setNewIngredient(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleAddIngredient()}
-                />
-                <select 
+                  />
+                  <select 
                     id="ingredient-category"
                     name="ingredient-category"
                     className="category-select"
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
-                >
+                  >
                     <option value="">Seleccionar categoría</option>
                     <option value="Vegetales">🥬 Vegetales</option>
                     <option value="Proteínas">🍖 Proteínas</option>
@@ -320,141 +355,207 @@ const AdminModal = ({
                     <option value="Cacahuates">🥜 Cacahuates</option>
                     <option value="Gomitas">🍬 Gomitas</option>
                     <option value="Botanas y Condimentos">🔥 Botanas y Condimentos</option>
-                </select>
-                <button 
+                  </select>
+                  <button 
                     className="add-ingredient-btn"
                     onClick={handleAddIngredient}
-                >
+                  >
                     Agregar
-                </button>
+                  </button>
                 </div>
-            </div>
+              </div>
 
-            {/* Lista de ingredientes por producto */}
-            <div className="ingredients-list">
+              <div className="ingredients-list">
                 <h4>📋 Ingredientes Base por Producto</h4>
                 {products.map(product => (
-                <div key={product.id} className="product-ingredients-card">
+                  <div key={product.id} className="product-ingredients-card">
                     <div className="product-ingredients-header">
-                    <h5>{product.name}</h5>
-                    <button 
+                      <h5>{product.name}</h5>
+                      <button 
                         className="edit-ingredients-btn"
-                        onClick={() => setEditingProduct(product.id)}
-                    >
+                        onClick={() => startEditingIngredients(product)}
+                      >
                         ✏️ Editar
-                    </button>
+                      </button>
                     </div>
                     
                     {editingProduct === product.id ? (
-                    <div className="edit-ingredients-mode">
+                      <div className="edit-ingredients-mode">
                         <p className="edit-hint">Selecciona los ingredientes base:</p>
                         <div className="edit-ingredients-grid">
-                        {allIngredients.map((ing, index) => (
+                          {allIngredients.map((ing, index) => (
                             <label 
-                            key={`edit-${product.id}-${ing}-${index}`}
-                            className="edit-ingredient-item"
+                              key={`edit-${product.id}-${ing}-${index}`}
+                              className="edit-ingredient-item"
                             >
-                            <input
+                              <input
                                 type="checkbox"
                                 checked={tempIngredients.includes(ing)}
                                 onChange={() => toggleTempIngredient(ing)}
-                            />
-                            <span>{ing}</span>
+                              />
+                              <span>{ing}</span>
                             </label>
-                        ))}
+                          ))}
                         </div>
                         <div className="edit-actions">
-                        <button 
+                          <button 
                             className="save-edit-btn"
                             onClick={() => handleSaveIngredients(product.id)}
-                        >
+                          >
                             💾 Guardar
-                        </button>
-                        <button 
+                          </button>
+                          <button 
                             className="cancel-edit-btn"
                             onClick={() => setEditingProduct(null)}
-                        >
+                          >
                             Cancelar
-                        </button>
+                          </button>
                         </div>
-                    </div>
+                      </div>
                     ) : (
-                    <>
+                      <>
                         {product.baseIngredients && product.baseIngredients.length > 0 ? (
-                        <div className="base-ingredients-tags">
+                          <div className="base-ingredients-tags">
                             {product.baseIngredients.map((ing, index) => (
-                            <span 
+                              <span 
                                 key={`${product.id}-${ing}-${index}`} 
                                 className="base-ingredient-tag"
-                            >
+                              >
                                 {ing}
                                 <button 
-                                className="remove-ingredient-btn"
-                                onClick={() => handleRemoveIngredient(product.id, ing)}
-                                title="Quitar ingrediente"
+                                  className="remove-ingredient-btn"
+                                  onClick={() => handleRemoveIngredient(product.id, ing)}
+                                  title="Quitar ingrediente"
                                 >
-                                ×
+                                  ×
                                 </button>
-                            </span>
+                              </span>
                             ))}
-                        </div>
+                          </div>
                         ) : (
-                        <p className="no-customization">Producto no personalizable</p>
+                          <p className="no-customization">Producto no personalizable</p>
                         )}
-                    </>
+                      </>
                     )}
-                </div>
+                  </div>
                 ))}
-            </div>
+              </div>
 
-            {/* Todos los ingredientes disponibles */}
-            <div className="all-ingredients-section">
+              <div className="all-ingredients-section">
                 <h4>🗂️ Todos los Ingredientes Disponibles ({allIngredients.length})</h4>
                 <div className="all-ingredients-tags">
-                {allIngredients && allIngredients.length > 0 ? (
+                  {allIngredients && allIngredients.length > 0 ? (
                     allIngredients.map((ing, index) => (
-                    <span 
+                      <span 
                         key={`all-${ing}-${index}`} 
                         className="available-ingredient-tag"
-                    >
+                      >
                         {ing}
-                    </span>
+                      </span>
                     ))
-                ) : (
+                  ) : (
                     <p>No hay ingredientes disponibles</p>
-                )}
+                  )}
                 </div>
+              </div>
             </div>
+          </div>
+        )}
 
-            {/* Estadísticas */}
-            <div className="ingredients-stats">
-                <h4>📊 Estadísticas de Ingredientes</h4>
-                <div className="stats-grid">
-                <div className="stat-card">
-                    <span className="stat-number">{allIngredients.length}</span>
-                    <span className="stat-label">Total Ingredientes</span>
+        {/* Tab: Configuración de Entrega */}
+        {activeTab === 'delivery' && (
+          <div className="admin-tab-content">
+            <h3>Configuración de Entrega</h3>
+            
+            <div className="delivery-config">
+              <div className="config-card">
+                <h4>🏪 Recoger en Puesto</h4>
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={localDeliverySettings.pickupEnabled}
+                    onChange={() => toggleDeliverySetting('pickupEnabled')}
+                  />
+                  <span className="toggle-slider"></span>
+                  <span className="toggle-label">
+                    {localDeliverySettings.pickupEnabled ? 'Habilitado' : 'Deshabilitado'}
+                  </span>
+                </label>
+              </div>
+
+              <div className="config-card">
+                <h4>🛵 Envío a Domicilio</h4>
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={localDeliverySettings.deliveryEnabled}
+                    onChange={() => toggleDeliverySetting('deliveryEnabled')}
+                  />
+                  <span className="toggle-slider"></span>
+                  <span className="toggle-label">
+                    {localDeliverySettings.deliveryEnabled ? 'Habilitado' : 'Deshabilitado'}
+                  </span>
+                </label>
+                
+                <div className="config-input">
+                  <label>Costo de envío:</label>
+                  <div className="input-with-prefix">
+                    <span className="prefix">$</span>
+                    <input
+                      type="number"
+                      value={localDeliverySettings.deliveryCost}
+                      onChange={(e) => updateDeliverySetting('deliveryCost', Number(e.target.value))}
+                      min="0"
+                    />
+                  </div>
                 </div>
-                <div className="stat-card">
-                    <span className="stat-number">
-                    {products.filter(p => p.baseIngredients && p.baseIngredients.length > 0).length}
-                    </span>
-                    <span className="stat-label">Productos Personalizables</span>
+              </div>
+
+              <div className="config-card">
+                <h4>⏰ Horarios</h4>
+                <div className="config-row">
+                  <div className="config-input">
+                    <label>Apertura:</label>
+                    <input
+                      type="time"
+                      value={localDeliverySettings.openingTime}
+                      onChange={(e) => updateDeliverySetting('openingTime', e.target.value)}
+                    />
+                  </div>
+                  <div className="config-input">
+                    <label>Cierre:</label>
+                    <input
+                      type="time"
+                      value={localDeliverySettings.closingTime}
+                      onChange={(e) => updateDeliverySetting('closingTime', e.target.value)}
+                    />
+                  </div>
                 </div>
-                <div className="stat-card">
-                    <span className="stat-number">
-                    {allIngredients.reduce((acc, ing) => {
-                        const count = products.filter(p => 
-                        p.baseIngredients && p.baseIngredients.includes(ing)
-                        ).length;
-                        return acc + count;
-                    }, 0)}
-                    </span>
-                    <span className="stat-label">Usos Totales</span>
+                <div className="config-input">
+                  <label>Intervalo entre horarios (minutos):</label>
+                  <input
+                    type="number"
+                    value={localDeliverySettings.scheduleInterval}
+                    onChange={(e) => updateDeliverySetting('scheduleInterval', Number(e.target.value))}
+                    min="5"
+                  />
                 </div>
+                <div className="config-input">
+                  <label>Tiempo de preparación (minutos):</label>
+                  <input
+                    type="number"
+                    value={localDeliverySettings.preparationTime}
+                    onChange={(e) => updateDeliverySetting('preparationTime', Number(e.target.value))}
+                    min="10"
+                  />
                 </div>
+              </div>
+
+              <button className="save-button" onClick={handleSaveDeliverySettings}>
+                💾 Guardar Configuración
+              </button>
             </div>
-            </div>
-        </div>
+          </div>
         )}
       </div>
     </div>

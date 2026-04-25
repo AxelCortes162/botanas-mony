@@ -128,3 +128,14 @@ export const paymentData = {
   clabe: "722969010167390444",
   whatsapp: "5531662608"
 };
+
+export const deliveryConfig = {
+  pickupEnabled: true,
+  deliveryEnabled: true,
+  deliveryCost: 30,
+  address: "Calle Principal #123, Col. Centro", // Dirección del puesto
+  scheduleInterval: 20, // minutos entre horarios
+  openingTime: "10:00",
+  closingTime: "20:00",
+  preparationTime: 30, // minutos de preparación
+};

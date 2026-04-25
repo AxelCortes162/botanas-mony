@@ -69,7 +69,10 @@ const CartModal = ({ cart, onClose, onRemove, onClear, onSendWhatsApp }) => {
                 <button className="btn-clear-cart" onClick={onClear}>
                   <span>🗑️</span> Vaciar Carrito
                 </button>
-                <button className="btn-send-whatsapp" onClick={onSendWhatsApp}>
+                <button className="btn-send-whatsapp" onClick={() => {
+                  onClose();
+                  onSendWhatsApp();
+                }}>
                   <span>💬</span> Enviar por WhatsApp
                 </button>
               </div>
