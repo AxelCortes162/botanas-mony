@@ -426,6 +426,207 @@
   margin-bottom: 12px;
 }
 
+.no-customization {
+  color: #999;
+  font-style: italic;
+  font-size: 0.85rem;
+  padding: 8px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.add-ingredient-section {
+  background: #f0f9ff;
+  border-radius: 15px;
+  padding: 20px;
+  margin-bottom: 25px;
+  border: 2px dashed #667eea;
+}
+
+.add-ingredient-section h4 {
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.add-ingredient-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ingredient-input {
+  width: 90%;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 0.95rem;
+}
+
+.category-select {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  background: white;
+}
+
+.add-ingredient-btn {
+  width: 100%;
+  padding: 12px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.add-ingredient-btn:hover {
+  background: #5a6fd6;
+}
+
+/* Edición de ingredientes */
+.product-ingredients-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.edit-ingredients-btn {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.edit-ingredients-btn:hover {
+  background: #5a6fd6;
+}
+
+.edit-ingredients-mode {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 10px;
+}
+
+.edit-hint {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.edit-ingredients-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.edit-ingredient-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  padding: 6px 10px;
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.save-edit-btn {
+  flex: 1;
+  padding: 10px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cancel-edit-btn {
+  flex: 1;
+  padding: 10px;
+  background: #e0e0e0;
+  color: #666;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.remove-ingredient-btn {
+  background: rgba(0, 0, 0, 0.1);
+  border: none;
+  color: #666;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+  transition: all 0.2s;
+}
+
+.remove-ingredient-btn:hover {
+  background: #e74c3c;
+  color: white;
+}
+
+/* Estadísticas */
+.ingredients-stats {
+  margin-top: 25px;
+}
+
+.ingredients-stats h4 {
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.stat-card {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.stat-number {
+  display: block;
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #667eea;
+  margin-bottom: 5px;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.7rem;
+  color: #666;
+  font-weight: 600;
+}
+
 /* Animaciones */
 @keyframes fadeIn {
   from { opacity: 0; }

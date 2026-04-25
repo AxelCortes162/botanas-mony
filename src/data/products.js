@@ -10,7 +10,7 @@ export const allIngredients = [
   "Crema",
   // Botanas
   "Takis",
-  // Salsas y condimentos
+  // Salsas y condimentos (AQUÍ ESTABA EL DUPLICADO)
   "Chamoy", "Miguelito", "Tajín", "Limón", "Sal",
   // Salsas líquidas
   "Salsa Valentina", "Salsa San Luis", "Salsa Botanera",

@@ -157,17 +157,21 @@ const IngredientModal = ({ product, allIngredients, onClose, onConfirm }) => {
               <div key={category} className="ingredient-category">
                 <h4 className="category-title">{category}</h4>
                 <div className="checkbox-grid">
-                  {availableIngredients.map(ing => {
+                  {availableIngredients.map((ing, index) => {
                     const isBase = baseIngredientsList.includes(ing);
                     const isSelected = selectedIngredients.includes(ing);
                     const isExtra = isSelected && !isBase;
+                    const ingredientId = `ing-${category}-${ing.replace(/\s+/g, '-').toLowerCase()}-${index}`;
                     
                     return (
                       <label 
-                        key={ing} 
+                        key={ingredientId}
+                        htmlFor={ingredientId}
                         className={`checkbox-item ${isBase ? 'base-ingredient' : ''} ${isExtra ? 'extra-selected' : ''}`}
                       >
                         <input 
+                          id={ingredientId}
+                          name={ingredientId}
                           type="checkbox" 
                           checked={isSelected}
                           onChange={() => handleCheckboxChange(ing)}

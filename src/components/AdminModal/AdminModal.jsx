@@ -8,7 +8,6 @@ const AdminModal = ({
   isOpen, 
   onToggleStore, 
   onUpdatePrices,
-  onUpdateIngredients,
   onClose 
 }) => {
   const [password, setPassword] = useState('');
@@ -16,8 +15,14 @@ const AdminModal = ({
   const [activeTab, setActiveTab] = useState('status');
   const [editedProducts, setEditedProducts] = useState([...products]);
   const [message, setMessage] = useState('');
+  const [newIngredient, setNewIngredient] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [tempIngredients, setTempIngredients] = useState([]);
+  const [localIngredients, setLocalIngredients] = useState([...allIngredients]);
+  const [localProducts, setLocalProducts] = useState([...products]);
 
-  const ADMIN_PASSWORD = 'mony2024'; // Contraseña del administrador
+  const ADMIN_PASSWORD = 'mony2024';
 
   const handleLogin = () => {
     if (password === ADMIN_PASSWORD) {
@@ -48,6 +53,66 @@ const AdminModal = ({
     onToggleStore();
   };
 
+  const handleAddIngredient = () => {
+    if (newIngredient.trim() && !localIngredients.includes(newIngredient.trim())) {
+        const updatedIngredients = [...localIngredients, newIngredient.trim()];
+        setLocalIngredients(updatedIngredients);
+        setNewIngredient('');
+        setSelectedCategory('');
+        setMessage('✅ Ingrediente agregado correctamente');
+        setTimeout(() => setMessage(''), 3000);
+    } else if (localIngredients.includes(newIngredient.trim())) {
+        setMessage('⚠️ Este ingrediente ya existe');
+        setTimeout(() => setMessage(''), 3000);
+    }
+    };
+
+    const handleRemoveIngredient = (productId, ingredient) => {
+    if (confirm(`¿Quitar "${ingredient}" de los ingredientes base?`)) {
+        const updatedProducts = localProducts.map(product => {
+        if (product.id === productId && product.baseIngredients) {
+            return {
+            ...product,
+            baseIngredients: product.baseIngredients.filter(ing => ing !== ingredient)
+            };
+        }
+        return product;
+        });
+        setLocalProducts(updatedProducts);
+        setMessage('✅ Ingrediente removido');
+        setTimeout(() => setMessage(''), 3000);
+    }
+    };
+
+    const startEditingIngredients = (product) => {
+    setEditingProduct(product.id);
+    setTempIngredients([...(product.baseIngredients || [])]);
+    };
+
+    const toggleTempIngredient = (ingredient) => {
+    if (tempIngredients.includes(ingredient)) {
+        setTempIngredients(tempIngredients.filter(i => i !== ingredient));
+    } else {
+        setTempIngredients([...tempIngredients, ingredient]);
+    }
+    };
+
+    const handleSaveIngredients = (productId) => {
+    const updatedProducts = localProducts.map(product => {
+        if (product.id === productId) {
+        return {
+            ...product,
+            baseIngredients: [...tempIngredients]
+        };
+        }
+        return product;
+    });
+    setLocalProducts(updatedProducts);
+    setEditingProduct(null);
+    setMessage('✅ Ingredientes base actualizados');
+    setTimeout(() => setMessage(''), 3000);
+    };
+
   if (!isAuthenticated) {
     return (
       <div className="admin-modal-overlay" onClick={onClose}>
@@ -63,14 +128,14 @@ const AdminModal = ({
             <div className="login-icon">👩‍🍳</div>
             <p className="login-text">Ingresa la contraseña para acceder</p>
             <input
-            id="admin-password"
-            name="admin-password"
-            type="password"
-            className="login-input"
-            placeholder="Contraseña"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+              id="admin-password"
+              name="admin-password"
+              type="password"
+              className="login-input"
+              placeholder="Contraseña"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
             />
             {message && <p className="login-message">{message}</p>}
             <button className="login-button" onClick={handleLogin}>
@@ -179,10 +244,12 @@ const AdminModal = ({
                   
                   <div className="price-inputs">
                     <div className="price-input-group">
-                      <label>Entero:</label>
+                      <label htmlFor={`price-${product.id}`}>Entero:</label>
                       <div className="input-with-prefix">
                         <span className="prefix">$</span>
                         <input
+                          id={`price-${product.id}`}
+                          name={`price-${product.id}`}
                           type="number"
                           value={product.price}
                           onChange={(e) => handlePriceChange(product.id, 'price', e.target.value)}
@@ -193,10 +260,12 @@ const AdminModal = ({
                     
                     {product.hasHalfOption && (
                       <div className="price-input-group">
-                        <label>Mitad:</label>
+                        <label htmlFor={`half-price-${product.id}`}>Mitad:</label>
                         <div className="input-with-prefix">
                           <span className="prefix">$</span>
                           <input
+                            id={`half-price-${product.id}`}
+                            name={`half-price-${product.id}`}
                             type="number"
                             value={product.halfPrice}
                             onChange={(e) => handlePriceChange(product.id, 'halfPrice', e.target.value)}
@@ -218,38 +287,174 @@ const AdminModal = ({
 
         {/* Tab: Ingredientes */}
         {activeTab === 'ingredients' && (
-          <div className="admin-tab-content">
+        <div className="admin-tab-content">
             <h3>Gestión de Ingredientes</h3>
             
             <div className="ingredients-manager">
-              <div className="ingredients-list">
-                <h4>Ingredientes Base por Producto</h4>
-                {products.map(product => (
-                  <div key={product.id} className="product-ingredients-card">
-                    <h5>{product.name}</h5>
-                    <div className="base-ingredients-tags">
-                      {product.baseIngredients.map(ing => (
-                        <span key={ing} className="base-ingredient-tag">
-                          {ing}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="all-ingredients-section">
-                <h4>Todos los Ingredientes Disponibles</h4>
-                <div className="all-ingredients-tags">
-                  {allIngredients.map(ing => (
-                    <span key={ing} className="available-ingredient-tag">
-                      {ing}
-                    </span>
-                  ))}
+            {/* Agregar nuevo ingrediente */}
+            <div className="add-ingredient-section">
+                <h4>➕ Agregar Nuevo Ingrediente</h4>
+                <div className="add-ingredient-form">
+                <input
+                    id="new-ingredient"
+                    name="new-ingredient"
+                    type="text"
+                    className="ingredient-input"
+                    placeholder="Nombre del ingrediente"
+                    value={newIngredient}
+                    onChange={(e) => setNewIngredient(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleAddIngredient()}
+                />
+                <select 
+                    id="ingredient-category"
+                    name="ingredient-category"
+                    className="category-select"
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                >
+                    <option value="">Seleccionar categoría</option>
+                    <option value="Vegetales">🥬 Vegetales</option>
+                    <option value="Proteínas">🍖 Proteínas</option>
+                    <option value="Lácteos">🥛 Lácteos</option>
+                    <option value="Salsas Líquidas">🌶️ Salsas Líquidas</option>
+                    <option value="Cacahuates">🥜 Cacahuates</option>
+                    <option value="Gomitas">🍬 Gomitas</option>
+                    <option value="Botanas y Condimentos">🔥 Botanas y Condimentos</option>
+                </select>
+                <button 
+                    className="add-ingredient-btn"
+                    onClick={handleAddIngredient}
+                >
+                    Agregar
+                </button>
                 </div>
-              </div>
             </div>
-          </div>
+
+            {/* Lista de ingredientes por producto */}
+            <div className="ingredients-list">
+                <h4>📋 Ingredientes Base por Producto</h4>
+                {products.map(product => (
+                <div key={product.id} className="product-ingredients-card">
+                    <div className="product-ingredients-header">
+                    <h5>{product.name}</h5>
+                    <button 
+                        className="edit-ingredients-btn"
+                        onClick={() => setEditingProduct(product.id)}
+                    >
+                        ✏️ Editar
+                    </button>
+                    </div>
+                    
+                    {editingProduct === product.id ? (
+                    <div className="edit-ingredients-mode">
+                        <p className="edit-hint">Selecciona los ingredientes base:</p>
+                        <div className="edit-ingredients-grid">
+                        {allIngredients.map((ing, index) => (
+                            <label 
+                            key={`edit-${product.id}-${ing}-${index}`}
+                            className="edit-ingredient-item"
+                            >
+                            <input
+                                type="checkbox"
+                                checked={tempIngredients.includes(ing)}
+                                onChange={() => toggleTempIngredient(ing)}
+                            />
+                            <span>{ing}</span>
+                            </label>
+                        ))}
+                        </div>
+                        <div className="edit-actions">
+                        <button 
+                            className="save-edit-btn"
+                            onClick={() => handleSaveIngredients(product.id)}
+                        >
+                            💾 Guardar
+                        </button>
+                        <button 
+                            className="cancel-edit-btn"
+                            onClick={() => setEditingProduct(null)}
+                        >
+                            Cancelar
+                        </button>
+                        </div>
+                    </div>
+                    ) : (
+                    <>
+                        {product.baseIngredients && product.baseIngredients.length > 0 ? (
+                        <div className="base-ingredients-tags">
+                            {product.baseIngredients.map((ing, index) => (
+                            <span 
+                                key={`${product.id}-${ing}-${index}`} 
+                                className="base-ingredient-tag"
+                            >
+                                {ing}
+                                <button 
+                                className="remove-ingredient-btn"
+                                onClick={() => handleRemoveIngredient(product.id, ing)}
+                                title="Quitar ingrediente"
+                                >
+                                ×
+                                </button>
+                            </span>
+                            ))}
+                        </div>
+                        ) : (
+                        <p className="no-customization">Producto no personalizable</p>
+                        )}
+                    </>
+                    )}
+                </div>
+                ))}
+            </div>
+
+            {/* Todos los ingredientes disponibles */}
+            <div className="all-ingredients-section">
+                <h4>🗂️ Todos los Ingredientes Disponibles ({allIngredients.length})</h4>
+                <div className="all-ingredients-tags">
+                {allIngredients && allIngredients.length > 0 ? (
+                    allIngredients.map((ing, index) => (
+                    <span 
+                        key={`all-${ing}-${index}`} 
+                        className="available-ingredient-tag"
+                    >
+                        {ing}
+                    </span>
+                    ))
+                ) : (
+                    <p>No hay ingredientes disponibles</p>
+                )}
+                </div>
+            </div>
+
+            {/* Estadísticas */}
+            <div className="ingredients-stats">
+                <h4>📊 Estadísticas de Ingredientes</h4>
+                <div className="stats-grid">
+                <div className="stat-card">
+                    <span className="stat-number">{allIngredients.length}</span>
+                    <span className="stat-label">Total Ingredientes</span>
+                </div>
+                <div className="stat-card">
+                    <span className="stat-number">
+                    {products.filter(p => p.baseIngredients && p.baseIngredients.length > 0).length}
+                    </span>
+                    <span className="stat-label">Productos Personalizables</span>
+                </div>
+                <div className="stat-card">
+                    <span className="stat-number">
+                    {allIngredients.reduce((acc, ing) => {
+                        const count = products.filter(p => 
+                        p.baseIngredients && p.baseIngredients.includes(ing)
+                        ).length;
+                        return acc + count;
+                    }, 0)}
+                    </span>
+                    <span className="stat-label">Usos Totales</span>
+                </div>
+                </div>
+            </div>
+            </div>
+        </div>
         )}
       </div>
     </div>
