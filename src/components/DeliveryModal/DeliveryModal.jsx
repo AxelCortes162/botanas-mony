@@ -26,7 +26,7 @@ const DeliveryModal = ({
     const closingMinute = parseInt(closingParts[1]);
     
     // Tiempo mínimo: ahora + preparación
-    const minTime = new Date(now.getTime() + (config.preparationTime + 20) * 60000);
+    const minTime = new Date(now.getTime() + (config.preparationTime + 5) * 60000);
     
     for (let h = openingHour; h <= closingHour; h++) {
       for (let m = (h === openingHour ? openingMinute : 0); m < 60; m += config.scheduleInterval) {
