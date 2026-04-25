@@ -92,6 +92,31 @@
   font-size: 0.8rem;
   font-weight: 600;
 }
+/* Pantalla de carga */
+.loading-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #fcfcfc;
+}
+
+.loading-spinner {
+  font-size: 4rem;
+  animation: spin 2s linear infinite;
+}
+
+.loading-screen p {
+  margin-top: 15px;
+  font-size: 1.2rem;
+  color: #666;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
 
 /* Responsive */
 @media (max-width: 500px) {
@@ -111,5 +136,57 @@
   
   .product-list {
     padding-bottom: 90px;
+  }
+}
+
+/* Agregar al final de App.css */
+
+/* Banner offline */
+.offline-banner {
+  background: #fff3cd;
+  color: #856404;
+  padding: 8px 15px;
+  text-align: center;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Pantalla de carga */
+.loading-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 50px 20px;
+  text-align: center;
+}
+
+.loading-spinner {
+  font-size: 4rem;
+  animation: bounce 1s infinite;
+}
+
+.loading-screen p {
+  margin-top: 15px;
+  font-size: 1.2rem;
+  color: #666;
+  font-weight: 600;
+}
+
+.loading-screen small {
+  color: #999;
+  margin-top: 5px;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
   }
 }

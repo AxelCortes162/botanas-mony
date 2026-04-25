@@ -1,4 +1,4 @@
-// App.jsx - Agregar sistema de administración
+// App.jsx
 import { useState, useEffect } from 'react';
 import './App.css';
 
@@ -10,6 +10,12 @@ import CartModal from './components/CartModal/CartModal';
 import TransferModal from './components/TransferModal/TransferModal';
 import AdminModal from './components/AdminModal/AdminModal';
 import { productsData as initialProducts, allIngredients, paymentData } from './data/products';
+import { 
+  saveStoreStatus, 
+  saveProducts, 
+  listenToStoreStatus, 
+  listenToProducts 
+} from './firebase';
 
 function App() {
   const [activeProduct, setActiveProduct] = useState(null);
@@ -19,17 +25,43 @@ function App() {
   const [showAdmin, setShowAdmin] = useState(false);
   const [isStoreOpen, setIsStoreOpen] = useState(true);
   const [products, setProducts] = useState(initialProducts);
-  
-  // Cargar estado de la tienda desde localStorage
+  const [loading, setLoading] = useState(true);
+  const [firebaseConnected, setFirebaseConnected] = useState(false);
+
+  // Inicializar Firebase y escuchar cambios
   useEffect(() => {
-    const savedState = localStorage.getItem('storeOpen');
-    if (savedState !== null) {
-      setIsStoreOpen(JSON.parse(savedState));
-    }
-    
-    const savedProducts = localStorage.getItem('products');
-    if (savedProducts) {
-      setProducts(JSON.parse(savedProducts));
+    // Intentar inicializar datos en Firebase
+    const initFirebase = async () => {
+      try {
+        saveStoreStatus(true);
+        saveProducts(initialProducts);
+        setFirebaseConnected(true);
+      } catch (error) {
+        console.log('Firebase no disponible, usando datos locales');
+        setFirebaseConnected(false);
+      }
+    };
+
+    initFirebase();
+
+    // Escuchar estado de la tienda desde Firebase
+    try {
+      listenToStoreStatus((status) => {
+        if (status && typeof status.isOpen === 'boolean') {
+          setIsStoreOpen(status.isOpen);
+        }
+        setLoading(false);
+      });
+
+      // Escuchar cambios en productos desde Firebase
+      listenToProducts((updatedProducts) => {
+        if (updatedProducts && updatedProducts.length > 0) {
+          setProducts(updatedProducts);
+        }
+      });
+    } catch (error) {
+      console.log('Usando datos locales');
+      setLoading(false);
     }
   }, []);
 
@@ -120,16 +152,44 @@ function App() {
   const handleToggleStore = () => {
     const newState = !isStoreOpen;
     setIsStoreOpen(newState);
-    localStorage.setItem('storeOpen', newState);
+    
+    // Guardar en Firebase si está disponible
+    if (firebaseConnected) {
+      saveStoreStatus(newState);
+    }
+    
+    // También guardar en localStorage como respaldo
+    localStorage.setItem('storeOpen', JSON.stringify(newState));
   };
 
   const handleUpdatePrices = (updatedProducts) => {
     setProducts(updatedProducts);
+    
+    // Guardar en Firebase si está disponible
+    if (firebaseConnected) {
+      saveProducts(updatedProducts);
+    }
+    
+    // También guardar en localStorage como respaldo
     localStorage.setItem('products', JSON.stringify(updatedProducts));
   };
 
   const totalItems = cart.length;
   const totalPrice = cart.reduce((acc, item) => acc + item.price, 0);
+
+  // Pantalla de carga
+  if (loading) {
+    return (
+      <div className="app-container">
+        <Header isStoreOpen={true} />
+        <div className="loading-screen">
+          <div className="loading-spinner">🍿</div>
+          <p>Cargando Botanas Mony...</p>
+          <small>Conectando con el servidor</small>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app-container">
@@ -140,10 +200,12 @@ function App() {
         className="admin-access-btn"
         onClick={() => setShowAdmin(true)}
         title="Administración"
+        aria-label="Abrir panel de administración"
       >
         ⚙️
       </button>
 
+      {/* Banner de tienda cerrada */}
       {!isStoreOpen && (
         <div className="store-closed-banner">
           <span>🔴</span>
@@ -152,6 +214,15 @@ function App() {
         </div>
       )}
 
+      {/* Indicador de conexión Firebase */}
+      {!firebaseConnected && (
+        <div className="offline-banner">
+          <span>📡</span>
+          <small>Modo sin conexión - Los cambios solo se guardan localmente</small>
+        </div>
+      )}
+
+      {/* Lista de productos */}
       <main className="product-list">
         {products.map(product => (
           <ProductCard 
@@ -169,6 +240,7 @@ function App() {
           <button 
             className="floating-btn transfer-btn"
             onClick={() => setShowTransfer(true)}
+            aria-label="Ver datos de transferencia"
           >
             <span>💳</span>
             <span className="btn-label">Transferencia</span>
@@ -177,6 +249,7 @@ function App() {
           <button 
             className="floating-btn cart-btn"
             onClick={() => setShowCart(true)}
+            aria-label={`Ver carrito con ${totalItems} productos`}
           >
             <span>🛒</span>
             {totalItems > 0 && (
@@ -190,7 +263,7 @@ function App() {
         </div>
       )}
 
-      {/* Modales */}
+      {/* Modal de Personalización */}
       {activeProduct && activeProduct.customizable && (
         <IngredientModal 
           product={activeProduct}
@@ -200,6 +273,7 @@ function App() {
         />
       )}
 
+      {/* Modal del Carrito */}
       {showCart && (
         <CartModal 
           cart={cart}
@@ -210,6 +284,7 @@ function App() {
         />
       )}
 
+      {/* Modal de Transferencia */}
       {showTransfer && (
         <TransferModal 
           paymentData={paymentData}
@@ -217,6 +292,7 @@ function App() {
         />
       )}
 
+      {/* Modal de Administración */}
       {showAdmin && (
         <AdminModal 
           products={products}
