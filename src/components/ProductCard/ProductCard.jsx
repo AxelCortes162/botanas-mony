@@ -1,11 +1,24 @@
 // src/components/ProductCard/ProductCard.jsx
+import { useState } from 'react';
 import './ProductCard.css';
 
 const ProductCard = ({ product, onAddClick, disabled }) => {
+  const [imageError, setImageError] = useState(false);
+
   return (
     <div className={`card-container ${disabled ? 'disabled' : ''}`}>
       <div className="card-image-placeholder">
-        <span>{product.name.charAt(0)}</span>
+        {product.image && !imageError ? (
+          <img 
+            src={product.image} 
+            alt={product.name}
+            className="card-image"
+            onError={() => setImageError(true)}
+            loading="lazy"
+          />
+        ) : (
+          <span className="card-image-letter">{product.name.charAt(0)}</span>
+        )}
       </div>
       
       <div className="card-info">

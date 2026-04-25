@@ -26,6 +26,7 @@ export const productsData = [
     name: "Chicharrón Preparado",
     price: 40,
     halfPrice: 25,
+    image: "/images/chicharrones.jpg",
     hasHalfOption: true,
     description: "Chicharrón de harina preparado con ingredientes frescos",
     baseIngredients: [
@@ -40,6 +41,7 @@ export const productsData = [
     name: "Dorilocos",
     price: 50,
     hasHalfOption: false,
+    image: "/images/dorilocos.webp",
     description: "Doritos preparados estilo loco",
     baseIngredients: [
       "Jícama", "Zanahoria", "Pepino", "Cueritos", "Cacahuate Japonés", 
