@@ -26,7 +26,7 @@ export const productsData = [
     name: "Chicharrón Preparado",
     price: 40,
     halfPrice: 25,
-    image: "/images/chicharrones.jpg",
+    image: "/images/products/chicharron.jpeg",
     hasHalfOption: true,
     description: "Chicharrón de harina preparado con ingredientes frescos",
     baseIngredients: [
@@ -41,7 +41,7 @@ export const productsData = [
     name: "Dorilocos",
     price: 50,
     hasHalfOption: false,
-    image: "/images/dorilocos.webp",
+    image: "/images/products/dorilocos.jpeg",
     description: "Doritos preparados estilo loco",
     baseIngredients: [
       "Jícama", "Zanahoria", "Pepino", "Cueritos", "Cacahuate Japonés", 
@@ -57,6 +57,7 @@ export const productsData = [
     name: "Vaso de Fruta",
     price: 10,
     hasHalfOption: false,
+    image: "/images/products/frutaVaso.jpeg",
     description: "Jícama, zanahoria, pepino y betabel frescos",
     baseIngredients: [
       "Jícama", "Zanahoria", "Pepino", "Betabel", "Limón", "Sal", "Salsa Valentina"
@@ -69,6 +70,7 @@ export const productsData = [
     name: "Charola de Fruta",
     price: 20,
     hasHalfOption: false,
+    image: "/images/products/frutaCharola.jpeg",
     description: "Charola grande de fruta fresca preparada",
     baseIngredients: [
       "Jícama", "Zanahoria", "Pepino", "Betabel", "Limón", "Sal", "Salsa Valentina"
@@ -81,6 +83,7 @@ export const productsData = [
     name: "Vaso de Cueritos",
     price: 15,
     hasHalfOption: false,
+    image: "/images/products/cueritos.jpeg",
     description: "Cueritos frescos preparados",
     baseIngredients: ["Cueritos", "Limón", "Sal", "Salsa Valentina"],
     category: "Preparados",
@@ -91,6 +94,7 @@ export const productsData = [
     name: "Uvas Cubiertas",
     price: 25,
     hasHalfOption: false,
+    image: "/images/products/uvas.jpeg",
     description: "Uvas frescas con cubierta dulce o picante",
     baseIngredients: [],
     category: "Dulces",
@@ -101,6 +105,7 @@ export const productsData = [
     name: "Pepino Loco",
     price: 35,
     hasHalfOption: false,
+    image: "/images/products/pepinosLocos.jpeg",
     description: "Pepino preparado estilo loco",
     baseIngredients: [
       "Chamoy", "Miguelito", "Cacahuate Japonés", "Cacahuate Queso", 
@@ -115,10 +120,25 @@ export const productsData = [
     name: "Manzana Cubierta",
     price: 30,
     hasHalfOption: false,
+    image: "/images/products/manzana.jpeg",
     description: "Manzana cubierta con chamoy o dulce",
     baseIngredients: [],
     category: "Dulces",
     customizable: false
+  },
+  {
+    id: 9,
+    name: "Manzana Loca",
+    price: 50,
+    hasHalfOption: false,
+    image: "/images/products/manzanaLoca.jpeg",
+    description: "Manzana preparada estilo loco",
+    baseIngredients: ["Jícama", "Zanahoria", "Pepino", 
+      "Cacahuate Japonés", "Cacahuate Queso", "Cacahuate Enchilado", 
+      "Gomitas Gusano", "Gomitas Pandita", 
+      "Limón", "Sal", "Salsa Valentina", "Tajín", "Chamoy", "Miguelito"],
+    category: "Preparados",
+    customizable: true
   }
 ];
 
