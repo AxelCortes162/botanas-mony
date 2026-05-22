@@ -48,6 +48,7 @@ function App() {
       try {
         saveStoreStatus(true);
         saveProducts(initialProducts);
+        saveDeliveryConfig(initialDeliveryConfig);
         setFirebaseConnected(true);
         listenToDeliveryConfig((updatedConfig) => {
           if (updatedConfig) {
