@@ -29,7 +29,7 @@ const AdminModal = ({
   // Estados para configuración de entrega
   const [localDeliverySettings, setLocalDeliverySettings] = useState({...deliverySettings});
 
-  const ADMIN_PASSWORD = 'mony2024';
+  const ADMIN_PASSWORD = '16267Moni';
 
   const handleLogin = () => {
     if (password === ADMIN_PASSWORD) {
