@@ -43,30 +43,27 @@ function App() {
 
   // Inicializar Firebase y cargar configuración
   useEffect(() => {
-    // Intentar inicializar Firebase
-    const initFirebase = async () => {
-      try {
-        saveStoreStatus(true);
-        saveProducts(initialProducts);
-        saveDeliveryConfig(initialDeliveryConfig);
-        setFirebaseConnected(true);
-        listenToDeliveryConfig((updatedConfig) => {
-          if (updatedConfig) {
-            setDeliverySettings(updatedConfig);
-            // Opcional: Actualizar localStorage para persistencia offline
-            localStorage.setItem('deliverySettings', JSON.stringify(updatedConfig));
-          }
-        });
-      } catch (error) {
-        console.log('Firebase no disponible, usando datos locales');
-        setFirebaseConnected(false);
-      }
-    };
-
-    initFirebase();
-
-    // Escuchar estado de la tienda desde Firebase
+  // 1. Intentar conectar con Firebase y ESCUCHAR los cambios en tiempo real
+  const initFirebase = async () => {
     try {
+      setFirebaseConnected(true);
+
+      // Escuchar la configuración de entrega de Firebase
+      listenToDeliveryConfig((updatedConfig) => {
+        if (updatedConfig) {
+          setDeliverySettings(updatedConfig);
+          localStorage.setItem('deliverySettings', JSON.stringify(updatedConfig));
+        }
+      });
+
+      // Escuchar los productos de Firebase
+      listenToProducts((updatedProducts) => {
+        if (updatedProducts && updatedProducts.length > 0) {
+          setProducts(updatedProducts);
+        }
+      });
+
+      // Escuchar el estado de la tienda (abierto/cerrado)
       listenToStoreStatus((status) => {
         if (status && typeof status.isOpen === 'boolean') {
           setIsStoreOpen(status.isOpen);
@@ -74,22 +71,32 @@ function App() {
         setLoading(false);
       });
 
-      listenToProducts((updatedProducts) => {
-        if (updatedProducts && updatedProducts.length > 0) {
-          setProducts(updatedProducts);
-        }
-      });
     } catch (error) {
-      console.log('Usando datos locales');
+      console.log('Firebase no disponible, usando datos locales');
+      setFirebaseConnected(false);
       setLoading(false);
     }
+  };
 
-    // Cargar configuración de entrega del localStorage
-    const savedDelivery = localStorage.getItem('deliverySettings');
-    if (savedDelivery) {
-      setDeliverySettings(JSON.parse(savedDelivery));
-    }
-  }, []);
+  initFirebase();
+
+  // 2. Respaldo por si están offline: Cargar configuración del localStorage
+  const savedDelivery = localStorage.getItem('deliverySettings');
+  if (savedDelivery) {
+    setDeliverySettings(JSON.parse(savedDelivery));
+  }
+  
+  const savedProducts = localStorage.getItem('products');
+  if (savedProducts) {
+    setProducts(JSON.parse(savedProducts));
+  }
+  
+  const savedStoreOpen = localStorage.getItem('storeOpen');
+  if (savedStoreOpen) {
+    setIsStoreOpen(JSON.parse(savedStoreOpen));
+  }
+
+}, []);
 
   const payment = paymentData;
 
