@@ -122,7 +122,7 @@ export const productsData = [
     hasHalfOption: false,
     available: true,
     image: '/images/products/uvas.jpeg',
-    description: 'Uvas frescas con cubierta dulce o picante',
+    description: 'Uvas frescas con cubierta dulce y picante',
     baseIngredients: [],
     category: 'Dulces',
     customizable: false,

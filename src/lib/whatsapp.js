@@ -51,10 +51,18 @@ export const buildOrderMessage = ({ items, subtotal, delivery, payment }) => {
   return lines.join('\n')
 }
 
-/** Abre WhatsApp con el mensaje ya escrito. */
-export const openWhatsApp = (phone, message) => {
+/** Enlace de WhatsApp con el mensaje ya escrito. */
+export const whatsAppUrl = (phone, message) => {
   const digits = String(phone ?? '').replace(/\D/g, '')
   const number = digits.length === 10 ? `52${digits}` : digits
-  const url = `https://wa.me/${number}?text=${encodeURIComponent(message)}`
-  window.open(url, '_blank', 'noopener,noreferrer')
+  return `https://wa.me/${number}?text=${encodeURIComponent(message)}`
+}
+
+/**
+ * Abre WhatsApp. Devuelve false si el navegador bloqueó la ventana emergente,
+ * para no decirle al cliente "ya se abrió" cuando no pasó nada.
+ */
+export const openWhatsApp = (phone, message) => {
+  const opened = window.open(whatsAppUrl(phone, message), '_blank', 'noopener,noreferrer')
+  return Boolean(opened)
 }

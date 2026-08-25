@@ -16,6 +16,7 @@ import { useCart } from './context/CartContext'
 import { useToast } from './context/ToastContext'
 import { normalize } from './lib/format'
 import { buildOrderMessage, openWhatsApp } from './lib/whatsapp'
+import { saveLastOrder } from './lib/lastOrder'
 
 function App() {
   const store = useStore()
@@ -90,11 +91,27 @@ function App() {
       payment: store.payment,
     })
 
-    openWhatsApp(store.payment.whatsapp, message)
+    const opened = openWhatsApp(store.payment.whatsapp, message)
+
+    // Si el navegador bloqueó la ventana, el pedido NO salió: vaciar el
+    // carrito aquí le borraría al cliente todo lo que armó.
+    if (!opened) {
+      toast('Tu navegador bloqueó WhatsApp. Permite las ventanas e inténtalo de nuevo.', 'error', 6000)
+      return
+    }
+
+    // Se recuerda de qué pedido es, para que el comprobante que mande
+    // después pueda citarlo en vez de llegar suelto.
+    saveLastOrder({
+      total: delivery.finalTotal,
+      customerName: delivery.customerName,
+      time: delivery.time,
+      method: delivery.method,
+    })
 
     setModal(null)
     cart.clear()
-    toast('¡Pedido enviado! Revisa WhatsApp 💬', 'success', 4000)
+    toast('¡Pedido enviado! Al pagar, manda tu comprobante con 💳', 'success', 5000)
   }
 
   /* -------------------------------- Carga --------------------------------- */
@@ -166,12 +183,11 @@ function App() {
         )}
       </main>
 
-      {store.isStoreOpen && (
-        <FloatingBar
-          onOpenTransfer={() => setModal('transfer')}
-          onOpenCart={() => setModal('cart')}
-        />
-      )}
+      <FloatingBar
+        isStoreOpen={store.isStoreOpen}
+        onOpenTransfer={() => setModal('transfer')}
+        onOpenCart={() => setModal('cart')}
+      />
 
       {activeProduct && (
         <IngredientModal

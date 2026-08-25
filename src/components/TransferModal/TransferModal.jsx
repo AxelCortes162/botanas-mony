@@ -2,13 +2,14 @@
 import { useState } from 'react'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
+import ReceiptSender from './ReceiptSender'
 import { useToast } from '../../context/ToastContext'
 import { cn } from '../../lib/format'
 
 const STEPS = [
   'Haz la transferencia por el total de tu pedido',
   'Guarda o toma captura del comprobante',
-  'Mándalo por WhatsApp junto con tu pedido',
+  'Mándalo por WhatsApp con el botón de aquí abajo',
   '¡Listo! Empezamos a prepararlo',
 ]
 
@@ -87,6 +88,8 @@ const TransferModal = ({ payment, onClose }) => {
           ))}
         </ol>
       </section>
+
+      <ReceiptSender payment={payment} />
 
       <div className="mt-4 flex gap-3 rounded-2xl border-2 border-brand-200 bg-brand-50 p-3">
         <span className="text-xl">⚠️</span>

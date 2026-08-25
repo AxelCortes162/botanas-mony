@@ -120,3 +120,21 @@ import('/src/initFirebase.js').then((m) => m.seedFirebase())
 4. Manda su comprobante de transferencia y Mony confirma.
 
 El número de WhatsApp y los datos bancarios están en `src/data/products.js`.
+
+### El comprobante de pago
+
+En el modal de Transferencia (botón 💳) el cliente elige la foto o el PDF de
+su transferencia y toca **Enviar por WhatsApp**.
+
+Un detalle que conviene tener claro: **un enlace `wa.me` solo puede llevar
+texto, nunca un archivo**. La única forma de que la imagen llegue a WhatsApp
+desde una web es el menú de compartir del propio celular (Web Share API), que
+es lo que usa `src/lib/receipt.js`. Funciona en los celulares actuales; en un
+navegador de escritorio o antiguo se abre el chat con el mensaje escrito y el
+cliente adjunta la foto con el 📎.
+
+La app nunca sube el archivo a ningún lado: la foto va del celular a WhatsApp
+sin pasar por Firebase ni por ningún servidor.
+
+Por eso el botón 💳 sigue visible aunque la tienda esté cerrada — el pago casi
+siempre ocurre un rato después del pedido.
