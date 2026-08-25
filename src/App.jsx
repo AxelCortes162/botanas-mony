@@ -1,383 +1,223 @@
-// App.jsx
-import { useState, useEffect } from 'react';
-import './App.css';
+// src/App.jsx
+import { useMemo, useState } from 'react'
 
-// Componentes
-import Header from './components/Header/Header';
-import ProductCard from './components/ProductCard/ProductCard';
-import IngredientModal from './components/IngredientModal/IngredientModal';
-import CartModal from './components/CartModal/CartModal';
-import TransferModal from './components/TransferModal/TransferModal';
-import AdminModal from './components/AdminModal/AdminModal';
-import DeliveryModal from './components/DeliveryModal/DeliveryModal';
+import Header from './components/Header/Header'
+import MenuToolbar from './components/MenuToolbar/MenuToolbar'
+import ProductCard from './components/ProductCard/ProductCard'
+import FloatingBar from './components/FloatingBar/FloatingBar'
+import IngredientModal from './components/IngredientModal/IngredientModal'
+import CartModal from './components/CartModal/CartModal'
+import DeliveryModal from './components/DeliveryModal/DeliveryModal'
+import TransferModal from './components/TransferModal/TransferModal'
+import AdminModal from './components/AdminModal/AdminModal'
 
-// Datos y Firebase
-import { 
-  productsData as initialProducts, 
-  allIngredients, 
-  paymentData, 
-  deliveryConfig as initialDeliveryConfig 
-} from './data/products';
-import { 
-  saveStoreStatus, 
-  saveProducts, 
-  listenToStoreStatus, 
-  listenToProducts,
-  saveDeliveryConfig,
-  listenToDeliveryConfig
-} from './firebase';
+import { useStore } from './context/StoreContext'
+import { useCart } from './context/CartContext'
+import { useToast } from './context/ToastContext'
+import { normalize } from './lib/format'
+import { buildOrderMessage, openWhatsApp } from './lib/whatsapp'
 
 function App() {
-  // Estados principales
-  const [activeProduct, setActiveProduct] = useState(null);
-  const [cart, setCart] = useState([]);
-  const [showCart, setShowCart] = useState(false);
-  const [showTransfer, setShowTransfer] = useState(false);
-  const [showAdmin, setShowAdmin] = useState(false);
-  const [showDelivery, setShowDelivery] = useState(false);
-  const [isStoreOpen, setIsStoreOpen] = useState(true);
-  const [products, setProducts] = useState(initialProducts);
-  const [deliverySettings, setDeliverySettings] = useState(initialDeliveryConfig);
-  const [loading, setLoading] = useState(true);
-  const [firebaseConnected, setFirebaseConnected] = useState(false);
+  const store = useStore()
+  const cart = useCart()
+  const { toast } = useToast()
 
-  // Inicializar Firebase y cargar configuración
-  useEffect(() => {
-  // 1. Intentar conectar con Firebase y ESCUCHAR los cambios en tiempo real
-  const initFirebase = async () => {
-    try {
-      setFirebaseConnected(true);
+  const [query, setQuery] = useState('')
+  const [category, setCategory] = useState('Todo')
+  const [activeProduct, setActiveProduct] = useState(null)
+  const [modal, setModal] = useState(null) // 'cart' | 'delivery' | 'transfer' | 'admin'
 
-      // Escuchar la configuración de entrega de Firebase
-      listenToDeliveryConfig((updatedConfig) => {
-        if (updatedConfig) {
-          setDeliverySettings(updatedConfig);
-          localStorage.setItem('deliverySettings', JSON.stringify(updatedConfig));
-        }
-      });
+  const visibleProducts = useMemo(() => {
+    const needle = normalize(query.trim())
 
-      // Escuchar los productos de Firebase
-      listenToProducts((updatedProducts) => {
-        if (updatedProducts && updatedProducts.length > 0) {
-          setProducts(updatedProducts);
-        }
-      });
+    return store.products
+      .filter((product) => product.available !== false)
+      .filter((product) => category === 'Todo' || product.category === category)
+      .filter((product) => {
+        if (!needle) return true
+        const haystack = normalize(
+          [product.name, product.description, ...(product.baseIngredients ?? [])].join(' '),
+        )
+        return haystack.includes(needle)
+      })
+  }, [store.products, category, query])
 
-      // Escuchar el estado de la tienda (abierto/cerrado)
-      listenToStoreStatus((status) => {
-        if (status && typeof status.isOpen === 'boolean') {
-          setIsStoreOpen(status.isOpen);
-        }
-        setLoading(false);
-      });
+  /* ------------------------------- Acciones ------------------------------- */
 
-    } catch (error) {
-      console.log('Firebase no disponible, usando datos locales');
-      setFirebaseConnected(false);
-      setLoading(false);
-    }
-  };
-
-  initFirebase();
-
-  // 2. Respaldo por si están offline: Cargar configuración del localStorage
-  const savedDelivery = localStorage.getItem('deliverySettings');
-  if (savedDelivery) {
-    setDeliverySettings(JSON.parse(savedDelivery));
-  }
-  
-  const savedProducts = localStorage.getItem('products');
-  if (savedProducts) {
-    setProducts(JSON.parse(savedProducts));
-  }
-  
-  const savedStoreOpen = localStorage.getItem('storeOpen');
-  if (savedStoreOpen) {
-    setIsStoreOpen(JSON.parse(savedStoreOpen));
-  }
-
-}, []);
-
-  const payment = paymentData;
-
-  // Manejo de agregar productos
   const handleAddClick = (product) => {
-    if (!isStoreOpen) {
-      alert('🛑 La tienda está cerrada en este momento. Vuelve pronto.');
-      return;
+    if (!store.isStoreOpen) {
+      toast(`🛑 Cerrado ahorita · ${store.scheduleLabel}`, 'warning', 3600)
+      return
     }
-    
-    if (!product.customizable) {
-      handleDirectAdd(product);
-    } else {
-      setActiveProduct(product);
-    }
-  };
 
-  const handleDirectAdd = (product) => {
-    const newItem = {
-      id: product.id,
+    if (product.customizable) {
+      setActiveProduct(product)
+      return
+    }
+
+    cart.addItem({
+      productId: product.id,
       name: product.name,
-      price: product.price,
+      image: product.image,
       size: 'entero',
-      customIngredients: [],
-      uniqueId: Date.now(),
-      customizable: false
-    };
-    setCart([...cart, newItem]);
-  };
+      unitPrice: product.price,
+      ingredients: [],
+      added: [],
+      removed: [],
+      note: '',
+    })
+    toast(`${product.name} agregado 🛒`)
+  }
 
-  const handleConfirmOrder = (product, ingredients, size, finalPrice) => {
-    const newItem = {
-      id: product.id,
-      name: product.name,
-      price: finalPrice,
-      size: size,
-      customIngredients: ingredients,
-      uniqueId: Date.now(),
-      customizable: true,
-      baseIngredients: product.baseIngredients
-    };
-    setCart([...cart, newItem]);
-    setActiveProduct(null);
-  };
+  const handleConfirmCustom = (item, qty) => {
+    cart.addItem(item, qty)
+    setActiveProduct(null)
+    toast(`${item.name} agregado 🛒`)
+  }
 
-  // Carrito
-  const removeFromCart = (uniqueId) => {
-    setCart(cart.filter(item => item.uniqueId !== uniqueId));
-  };
-
-  const clearCart = () => {
-    if (cart.length === 0) return;
-    if (confirm('¿Estás seguro de vaciar el carrito?')) {
-      setCart([]);
+  const handleSendOrder = (delivery) => {
+    // El reloj pudo cerrar la tienda con el modal ya abierto
+    if (!store.isStoreOpen) {
+      setModal(null)
+      toast(`🛑 Acabamos de cerrar · ${store.scheduleLabel}`, 'warning', 4000)
+      return
     }
-  };
 
-  const totalPrice = cart.reduce((acc, item) => acc + item.price, 0);
+    const message = buildOrderMessage({
+      items: cart.items,
+      subtotal: cart.subtotal,
+      delivery,
+      payment: store.payment,
+    })
 
-  // WhatsApp con información de entrega
-  const handleSendWhatsApp = (deliveryInfo) => {
-    const total = deliveryInfo ? deliveryInfo.finalTotal : totalPrice;
-    let message = `🍿 *NUEVO PEDIDO - BOTANAS MONY* 🍿\n\n`;
-    message += `¡Hola Mony! Quiero hacer un pedido:\n\n`;
-    
-    cart.forEach((item, index) => {
-      message += `📦 *${index + 1}. ${item.name}*`;
-      if (item.size === 'mitad') {
-        message += ` (Mitad)`;
-      }
-      message += ` - $${item.price}\n`;
-      
-      if (item.customizable && item.customIngredients.length > 0) {
-        message += `   🥗 Ingredientes: ${item.customIngredients.join(', ')}\n`;
-      }
-      message += `\n`;
-    });
+    openWhatsApp(store.payment.whatsapp, message)
 
-    message += `━━━━━━━━━━━━━━━━━━\n`;
-    
-    if (deliveryInfo) {
-      message += `🛵 *Método:* ${deliveryInfo.method === 'pickup' ? 'Recoger en puesto' : 'Envío a domicilio'}\n`;
-      message += `📍 *Dirección:* ${deliveryInfo.address}\n`;
-      message += `🕐 *Horario:* ${deliveryInfo.time}\n`;
-      if (deliveryInfo.deliveryCost > 0) {
-        message += `💸 *Envío:* $${deliveryInfo.deliveryCost}\n`;
-      }
-      message += `💰 *TOTAL: $${total}*\n`;
-    } else {
-      message += `💰 *TOTAL: $${totalPrice}*\n`;
-    }
-    
-    message += `━━━━━━━━━━━━━━━━━━\n\n`;
-    message += `✅ Confirmo que haré transferencia`;
+    setModal(null)
+    cart.clear()
+    toast('¡Pedido enviado! Revisa WhatsApp 💬', 'success', 4000)
+  }
 
-    const url = `https://wa.me/52${payment.whatsapp}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
-    
-    // Limpiar carrito después de enviar
-    if (deliveryInfo) {
-      setCart([]);
-    }
-  };
+  /* -------------------------------- Carga --------------------------------- */
 
-  // Funciones de administración
-  const handleToggleStore = () => {
-    const newState = !isStoreOpen;
-    setIsStoreOpen(newState);
-    
-    if (firebaseConnected) {
-      saveStoreStatus(newState);
-    }
-    localStorage.setItem('storeOpen', JSON.stringify(newState));
-  };
-
-  const handleUpdatePrices = (updatedProducts) => {
-    setProducts(updatedProducts);
-    
-    if (firebaseConnected) {
-      saveProducts(updatedProducts);
-    }
-    localStorage.setItem('products', JSON.stringify(updatedProducts));
-  };
-
-  const handleUpdateDeliverySettings = (settings) => {
-    setDeliverySettings(settings);
-    
-    if (firebaseConnected) {
-      saveDeliveryConfig(settings);
-    }
-    localStorage.setItem('deliverySettings', JSON.stringify(settings));
-  };
-
-  const totalItems = cart.length;
-
-  // Pantalla de carga
-  if (loading) {
+  if (store.loading) {
     return (
-      <div className="app-container">
-        <Header isStoreOpen={true} />
-        <div className="loading-screen">
-          <div className="loading-spinner">🍿</div>
-          <p>Cargando Botanas Mony...</p>
-          <small>Conectando con el servidor</small>
+      <div className="grid min-h-dvh place-items-center bg-cream-deep px-6 text-center">
+        <div>
+          <span className="block animate-float text-6xl">🍿</span>
+          <p className="mt-5 font-display text-xl font-extrabold text-ink">Botanas Mony</p>
+          <p className="mt-1 text-sm text-ink-soft">Preparando el menú…</p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
-    <div className="app-container">
-      <Header isStoreOpen={isStoreOpen} />
+    <div className="mx-auto flex min-h-dvh max-w-lg flex-col bg-cream-deep shadow-soft">
+      <Header
+        isStoreOpen={store.isStoreOpen}
+        isOnline={store.isOnline}
+        scheduleLabel={store.scheduleLabel}
+      />
 
-      {/* Botón de administrador */}
-      <button 
-        className="admin-access-btn"
-        onClick={() => setShowAdmin(true)}
+      <button
+        type="button"
+        onClick={() => setModal('admin')}
         title="Administración"
         aria-label="Abrir panel de administración"
+        className="fixed right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-50 grid size-9 place-items-center rounded-full bg-white/20 text-base text-white backdrop-blur transition hover:bg-white/35 active:scale-90"
       >
         ⚙️
       </button>
 
-      {/* Banner de tienda cerrada */}
-      {!isStoreOpen && (
-        <div className="store-closed-banner">
-          <span>🔴</span>
-          <p>Tienda cerrada temporalmente</p>
-          <small>Volveremos pronto</small>
+      {!store.isStoreOpen && (
+        <div className="mx-4 mt-4 rounded-2xl bg-linear-to-br from-chili-500 to-chili-600 p-5 text-center text-white shadow-lift">
+          <span className="text-3xl">😴</span>
+          <p className="mt-1 font-display text-lg font-extrabold">{store.scheduleLabel}</p>
+          <p className="text-sm text-white/85">
+            Puedes ver el menú y antojarte; los pedidos se abren en cuanto encendamos el puesto.
+          </p>
         </div>
       )}
 
-      {/* Indicador de conexión */}
-      {!firebaseConnected && (
-        <div className="offline-banner">
-          <span>📡</span>
-          <small>Modo sin conexión - Los cambios solo se guardan localmente</small>
-        </div>
-      )}
+      <MenuToolbar
+        query={query}
+        onQueryChange={setQuery}
+        categories={store.categories}
+        activeCategory={category}
+        onCategoryChange={setCategory}
+      />
 
-      {/* Lista de productos */}
-      <main className="product-list">
-        {products.map(product => (
-          <ProductCard 
-            key={product.id} 
-            product={product} 
-            onAddClick={handleAddClick}
-            disabled={!isStoreOpen}
-          />
-        ))}
+      <main className="flex-1 space-y-2.5 px-4 pb-28 pt-3">
+        {visibleProducts.length > 0 ? (
+          visibleProducts.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              onAddClick={handleAddClick}
+              disabled={!store.isStoreOpen}
+            />
+          ))
+        ) : (
+          <div className="py-16 text-center">
+            <span className="block text-5xl">🔍</span>
+            <p className="mt-3 font-display text-lg font-extrabold text-ink">Nada por aquí</p>
+            <p className="mt-1 text-sm text-ink-soft">Prueba con otra búsqueda o categoría.</p>
+          </div>
+        )}
       </main>
 
-      {/* Botones flotantes (solo si la tienda está abierta) */}
-      {isStoreOpen && (
-        <div className="floating-buttons">
-          <button 
-            className="floating-btn transfer-btn"
-            onClick={() => setShowTransfer(true)}
-            aria-label="Ver datos de transferencia"
-          >
-            <span>💳</span>
-            <span className="btn-label">Transferencia</span>
-          </button>
-
-          <button 
-            className="floating-btn cart-btn"
-            onClick={() => setShowCart(true)}
-            aria-label={`Ver carrito con ${totalItems} productos`}
-          >
-            <span>🛒</span>
-            {totalItems > 0 && (
-              <span className="cart-badge">{totalItems}</span>
-            )}
-            <span className="btn-label">Carrito</span>
-            {totalItems > 0 && (
-              <span className="cart-total-badge">${totalPrice}</span>
-            )}
-          </button>
-        </div>
+      {store.isStoreOpen && (
+        <FloatingBar
+          onOpenTransfer={() => setModal('transfer')}
+          onOpenCart={() => setModal('cart')}
+        />
       )}
 
-      {/* Modal de Personalización */}
-      {activeProduct && activeProduct.customizable && (
-        <IngredientModal 
+      {activeProduct && (
+        <IngredientModal
+          key={activeProduct.id}
           product={activeProduct}
-          allIngredients={allIngredients}
+          availableIngredients={store.ingredients}
           onClose={() => setActiveProduct(null)}
-          onConfirm={handleConfirmOrder}
+          onConfirm={handleConfirmCustom}
         />
       )}
 
-      {/* Modal del Carrito */}
-      {showCart && (
-        <CartModal 
-          cart={cart}
-          onClose={() => setShowCart(false)}
-          onRemove={removeFromCart}
-          onClear={clearCart}
-          onSendWhatsApp={() => {
-            setShowCart(false);
-            setShowDelivery(true);
+      {modal === 'cart' && (
+        <CartModal
+          onClose={() => setModal(null)}
+          onContinue={() => {
+            if (cart.isEmpty) {
+              toast('Agrega algo antes de continuar 🙂', 'info')
+              return
+            }
+            if (!store.isStoreOpen) {
+              setModal(null)
+              toast(`🛑 Acabamos de cerrar · ${store.scheduleLabel}`, 'warning', 4000)
+              return
+            }
+            setModal('delivery')
           }}
         />
       )}
 
-      {/* Modal de Entrega */}
-      {showDelivery && (
-        <DeliveryModal 
-          config={deliverySettings}
-          totalPrice={totalPrice}
-          onClose={() => setShowDelivery(false)}
-          onConfirm={(deliveryInfo) => {
-            setShowDelivery(false);
-            handleSendWhatsApp(deliveryInfo);
-          }}
+      {modal === 'delivery' && (
+        <DeliveryModal
+          config={store.todayDelivery}
+          subtotal={cart.subtotal}
+          now={store.clock}
+          onClose={() => setModal('cart')}
+          onConfirm={handleSendOrder}
         />
       )}
 
-      {/* Modal de Transferencia */}
-      {showTransfer && (
-        <TransferModal 
-          paymentData={paymentData}
-          onClose={() => setShowTransfer(false)}
-        />
+      {modal === 'transfer' && (
+        <TransferModal payment={store.payment} onClose={() => setModal(null)} />
       )}
 
-      {/* Modal de Administración */}
-      {showAdmin && (
-        <AdminModal 
-          products={products}
-          allIngredients={allIngredients}
-          isOpen={isStoreOpen}
-          onToggleStore={handleToggleStore}
-          onUpdatePrices={handleUpdatePrices}
-          onUpdateDeliverySettings={handleUpdateDeliverySettings}
-          deliverySettings={deliverySettings}
-          onClose={() => setShowAdmin(false)}
-        />
-      )}
+      {modal === 'admin' && <AdminModal onClose={() => setModal(null)} />}
     </div>
-  );
+  )
 }
 
-export default App;
+export default App

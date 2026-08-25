@@ -1,0 +1,34 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "store": {
+      "status": {
+        ".read": true,
+        ".write": "auth != null",
+        "date": { ".validate": "newData.isString()" },
+        "isOpen": { ".validate": "newData.isBoolean()" },
+        "pickup": { ".validate": "newData.isBoolean()" },
+        "delivery": { ".validate": "newData.isBoolean()" },
+        "lastUpdated": { ".validate": "newData.isString()" },
+        "$other": { ".validate": false }
+      },
+
+      "products": {
+        ".read": true,
+        ".write": "auth != null"
+      },
+
+      "delivery": {
+        ".read": true,
+        ".write": "auth != null"
+      },
+
+      "ingredients": {
+        ".read": true,
+        ".write": "auth != null"
+      }
+    }
+  }
+}

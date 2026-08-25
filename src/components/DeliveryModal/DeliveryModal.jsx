@@ -1,197 +1,281 @@
 // src/components/DeliveryModal/DeliveryModal.jsx
-import { useState, useEffect } from 'react';
-import './DeliveryModal.css';
+import { useEffect, useMemo, useState } from 'react'
+import Modal from '../ui/Modal'
+import Button from '../ui/Button'
+import { generateTimeSlots } from '../../lib/schedule'
+import { cn, money, prettyTime } from '../../lib/format'
 
-const DeliveryModal = ({ 
-  config, 
-  totalPrice, 
-  onClose, 
-  onConfirm 
-}) => {
-  const [deliveryMethod, setDeliveryMethod] = useState('pickup');
-  const [address, setAddress] = useState('');
-  const [selectedTime, setSelectedTime] = useState('');
-  const [availableTimes, setAvailableTimes] = useState([]);
+const DeliveryModal = ({ config, subtotal, now, onClose, onConfirm }) => {
+  // `now` viene del reloj del contexto: así las horas ya pasadas desaparecen
+  // aunque el cliente deje el modal abierto un buen rato.
+  const slots = useMemo(() => generateTimeSlots(config, now), [config, now])
 
-  // Generar horarios disponibles
+  const methods = useMemo(
+    () =>
+      [
+        {
+          key: 'pickup',
+          enabled: config.pickupEnabled,
+          icon: '🏪',
+          title: 'Recoger en el puesto',
+          description: 'Sin costo extra',
+          extra: `📍 ${config.address}`,
+        },
+        {
+          key: 'delivery',
+          enabled: config.deliveryEnabled,
+          icon: '🛵',
+          title: 'Envío a domicilio',
+          description: `+${money(config.deliveryCost)} de envío`,
+        },
+      ].filter((option) => option.enabled),
+    [config],
+  )
+
+  // Arranca siempre en un método que exista de verdad: si solo hay envío, no
+  // tiene sentido preseleccionar "recoger" (ni cobrar envío por un método
+  // que la pantalla no muestra).
+  const [method, setMethod] = useState(() => methods[0]?.key ?? 'pickup')
+  const [customerName, setCustomerName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [address, setAddress] = useState('')
+  const [time, setTime] = useState('asap')
+  const [errors, setErrors] = useState({})
+
+  // El modal sigue abierto mientras el cliente escribe: si el admin desactiva
+  // el método elegido en ese rato, hay que cambiarlo o se cobraría un envío
+  // que la pantalla ya no ofrece.
   useEffect(() => {
-    const times = [];
-    const now = new Date();
-    const openingParts = config.openingTime.split(':');
-    const closingParts = config.closingTime.split(':');
-    
-    const openingHour = parseInt(openingParts[0]);
-    const openingMinute = parseInt(openingParts[1]);
-    const closingHour = parseInt(closingParts[0]);
-    const closingMinute = parseInt(closingParts[1]);
-    
-    // Tiempo mínimo: ahora + preparación
-    const minTime = new Date(now.getTime() + (config.preparationTime + 5) * 60000);
-    
-    for (let h = openingHour; h <= closingHour; h++) {
-      for (let m = (h === openingHour ? openingMinute : 0); m < 60; m += config.scheduleInterval) {
-        if (h === closingHour && m > closingMinute) break;
-        
-        const timeDate = new Date();
-        timeDate.setHours(h, m, 0, 0);
-        
-        // Solo mostrar horarios futuros
-        if (timeDate > minTime) {
-          const timeString = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-          times.push({
-            value: timeString,
-            label: timeString,
-            full: timeDate
-          });
-        }
-      }
+    if (methods.length > 0 && !methods.some((option) => option.key === method)) {
+      setMethod(methods[0].key)
     }
-    
-    setAvailableTimes(times);
-    if (times.length > 0) {
-      setSelectedTime(times[0].value);
-    }
-  }, [config]);
+  }, [methods, method])
 
-  const deliveryTotal = deliveryMethod === 'delivery' ? config.deliveryCost : 0;
-  const finalTotal = totalPrice + deliveryTotal;
+  // Solo cuenta el método si sigue ofreciéndose: si el admin lo desactiva con
+  // el modal abierto, no se puede seguir cobrando un envío que ya no existe.
+  const activeMethod = methods.some((option) => option.key === method) ? method : null
+  const deliveryCost = activeMethod === 'delivery' ? Number(config.deliveryCost) || 0 : 0
+  const finalTotal = subtotal + deliveryCost
 
   const handleConfirm = () => {
-    if (deliveryMethod === 'delivery' && !address.trim()) {
-      alert('Por favor ingresa la dirección de entrega');
-      return;
-    }
-    
+    const nextErrors = {}
+    if (!customerName.trim()) nextErrors.customerName = 'Necesitamos tu nombre'
+    if (activeMethod === 'delivery' && !address.trim()) nextErrors.address = 'Escribe la dirección'
+
+    setErrors(nextErrors)
+    if (Object.keys(nextErrors).length > 0) return
+
     onConfirm({
-      method: deliveryMethod,
-      address: deliveryMethod === 'delivery' ? address : config.address,
-      time: selectedTime,
-      deliveryCost: deliveryTotal,
-      finalTotal: finalTotal
-    });
-  };
+      method: activeMethod ?? 'pickup',
+      customerName: customerName.trim(),
+      phone: phone.trim(),
+      address: activeMethod === 'delivery' ? address.trim() : config.address,
+      time,
+      deliveryCost,
+      finalTotal,
+    })
+  }
 
   return (
-    <div className="delivery-modal-overlay" onClick={onClose}>
-      <div className="delivery-modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="delivery-modal-header">
-          <h2 className="delivery-modal-title">
-            <span>🚚</span> Método de Entrega
-          </h2>
-          <button className="delivery-modal-close" onClick={onClose}>×</button>
-        </div>
-
-        <div className="delivery-modal-body">
-          {/* Selector de método */}
-          <div className="delivery-method-section">
-            <p className="section-label">¿Cómo quieres recibir tu pedido?</p>
-            
-            <div className="delivery-methods">
-              {config.pickupEnabled && (
-                <button 
-                  className={`method-card ${deliveryMethod === 'pickup' ? 'active' : ''}`}
-                  onClick={() => setDeliveryMethod('pickup')}
-                >
-                  <span className="method-icon">🏪</span>
-                  <div className="method-info">
-                    <span className="method-title">Recoger en Puesto</span>
-                    <span className="method-description">Sin costo extra</span>
-                    <span className="method-address">📍 {config.address}</span>
-                  </div>
-                  <div className="method-check">
-                    {deliveryMethod === 'pickup' && '✓'}
-                  </div>
-                </button>
-              )}
-              
-              {config.deliveryEnabled && (
-                <button 
-                  className={`method-card ${deliveryMethod === 'delivery' ? 'active' : ''}`}
-                  onClick={() => setDeliveryMethod('delivery')}
-                >
-                  <span className="method-icon">🛵</span>
-                  <div className="method-info">
-                    <span className="method-title">Envío a Domicilio</span>
-                    <span className="method-description">+${config.deliveryCost} envío</span>
-                  </div>
-                  <div className="method-check">
-                    {deliveryMethod === 'delivery' && '✓'}
-                  </div>
-                </button>
-              )}
+    <Modal
+      title="Datos de entrega"
+      icon="🚚"
+      size="md"
+      onClose={onClose}
+      footer={
+        <>
+          <div className="mb-3 space-y-1 text-sm font-semibold text-ink-soft">
+            <div className="flex justify-between">
+              <span>Subtotal</span>
+              <span>{money(subtotal)}</span>
             </div>
-          </div>
-
-          {/* Dirección (solo para domicilio) */}
-          {deliveryMethod === 'delivery' && (
-            <div className="address-section">
-              <label htmlFor="delivery-address" className="section-label">
-                📍 Dirección de entrega:
-              </label>
-              <textarea
-                id="delivery-address"
-                name="delivery-address"
-                className="address-input"
-                placeholder="Calle, número, colonia, referencias..."
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                rows="3"
-              />
-            </div>
-          )}
-
-          {/* Selector de horario */}
-          <div className="schedule-section">
-            <label htmlFor="pickup-time" className="section-label">
-              🕐 ¿A qué hora quieres tu pedido?
-            </label>
-            <select
-              id="pickup-time"
-              name="pickup-time"
-              className="time-select"
-              value={selectedTime}
-              onChange={(e) => setSelectedTime(e.target.value)}
-            >
-              {availableTimes.map(time => (
-                <option key={time.value} value={time.value}>
-                  {time.label}
-                </option>
-              ))}
-            </select>
-            <small className="schedule-hint">
-              ⏱️ Tiempo de preparación: {config.preparationTime} min
-            </small>
-          </div>
-
-          {/* Resumen del pedido */}
-          <div className="delivery-summary">
-            <h4>📋 Resumen del Pedido</h4>
-            <div className="summary-row">
-              <span>Subtotal:</span>
-              <span>${totalPrice}</span>
-            </div>
-            {deliveryMethod === 'delivery' && (
-              <div className="summary-row">
-                <span>Envío:</span>
-                <span>+${config.deliveryCost}</span>
+            {deliveryCost > 0 && (
+              <div className="flex justify-between">
+                <span>Envío</span>
+                <span>+{money(deliveryCost)}</span>
               </div>
             )}
-            <div className="summary-row total">
-              <span>Total:</span>
-              <span>${finalTotal}</span>
+            <div className="flex items-center justify-between border-t border-line pt-2">
+              <span className="font-display text-base font-extrabold text-ink">Total</span>
+              <span className="font-display text-2xl font-extrabold text-brand-700">
+                {money(finalTotal)}
+              </span>
             </div>
           </div>
+          <Button variant="whatsapp" size="lg" full onClick={handleConfirm}>
+            💬 Enviar pedido por WhatsApp
+          </Button>
+        </>
+      }
+    >
+      {/* Método */}
+      <section>
+        <p className="mb-2 text-xs font-extrabold uppercase tracking-wide text-ink-faint">
+          ¿Cómo quieres recibirlo?
+        </p>
+        {methods.length === 0 && (
+          <p className="rounded-2xl bg-brand-50 p-3 text-xs font-semibold text-brand-900">
+            Ahorita no hay métodos de entrega configurados. Manda tu pedido y Mony te confirma cómo
+            recibirlo.
+          </p>
+        )}
+
+        <div className="space-y-2">
+          {methods.map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              onClick={() => setMethod(option.key)}
+              className={cn(
+                'no-tap-highlight flex w-full items-center gap-3 rounded-2xl border-2 p-3 text-left transition active:scale-[0.99]',
+                method === option.key
+                  ? 'border-brand-600 bg-brand-50'
+                  : 'border-line bg-white hover:border-brand-200',
+              )}
+            >
+              <span className="text-2xl">{option.icon}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-display text-sm font-extrabold text-ink">
+                  {option.title}
+                </span>
+                <span className="block text-xs font-semibold text-ink-soft">
+                  {option.description}
+                </span>
+                {option.extra && (
+                  <span className="mt-0.5 block text-[11px] text-ink-faint">{option.extra}</span>
+                )}
+              </span>
+              <span
+                className={cn(
+                  'grid size-6 shrink-0 place-items-center rounded-full border-2 text-xs font-extrabold',
+                  method === option.key
+                    ? 'border-brand-600 bg-brand-600 text-white'
+                    : 'border-line text-transparent',
+                )}
+              >
+                ✓
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Datos del cliente */}
+      <section className="mt-4 space-y-3">
+        <div>
+          <label
+            htmlFor="customer-name"
+            className="mb-1.5 block text-xs font-extrabold uppercase tracking-wide text-ink-faint"
+          >
+            👤 Tu nombre
+          </label>
+          <input
+            id="customer-name"
+            type="text"
+            autoComplete="name"
+            value={customerName}
+            onChange={(event) => setCustomerName(event.target.value)}
+            placeholder="¿Cómo te llamas?"
+            className={cn(
+              'w-full rounded-2xl border-2 bg-white px-4 py-3 text-sm font-semibold text-ink placeholder:font-medium placeholder:text-ink-faint focus:outline-none',
+              errors.customerName ? 'border-chili-500' : 'border-line focus:border-brand-400',
+            )}
+          />
+          {errors.customerName && (
+            <p className="mt-1 text-xs font-bold text-chili-600">{errors.customerName}</p>
+          )}
         </div>
 
-        <button 
-          className="confirm-delivery-btn"
-          onClick={handleConfirm}
-        >
-          ✅ Confirmar Pedido
-        </button>
-      </div>
-    </div>
-  );
-};
+        <div>
+          <label
+            htmlFor="customer-phone"
+            className="mb-1.5 block text-xs font-extrabold uppercase tracking-wide text-ink-faint"
+          >
+            📱 Teléfono (opcional)
+          </label>
+          <input
+            id="customer-phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
+            placeholder="10 dígitos"
+            className="w-full rounded-2xl border-2 border-line bg-white px-4 py-3 text-sm font-semibold text-ink placeholder:font-medium placeholder:text-ink-faint focus:border-brand-400 focus:outline-none"
+          />
+        </div>
 
-export default DeliveryModal;
+        {activeMethod === 'delivery' && (
+          <div>
+            <label
+              htmlFor="delivery-address"
+              className="mb-1.5 block text-xs font-extrabold uppercase tracking-wide text-ink-faint"
+            >
+              📍 Dirección de entrega
+            </label>
+            <textarea
+              id="delivery-address"
+              rows="3"
+              value={address}
+              onChange={(event) => setAddress(event.target.value)}
+              placeholder="Calle, número, colonia y referencias…"
+              className={cn(
+                'w-full resize-none rounded-2xl border-2 bg-white px-4 py-3 text-sm font-semibold text-ink placeholder:font-medium placeholder:text-ink-faint focus:outline-none',
+                errors.address ? 'border-chili-500' : 'border-line focus:border-brand-400',
+              )}
+            />
+            {errors.address && (
+              <p className="mt-1 text-xs font-bold text-chili-600">{errors.address}</p>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* Horario */}
+      <section className="mt-4">
+        <p className="mb-2 text-xs font-extrabold uppercase tracking-wide text-ink-faint">
+          🕐 ¿Para qué hora?
+        </p>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setTime('asap')}
+            className={cn(
+              'no-tap-highlight rounded-full border-2 px-4 py-2 text-sm font-extrabold transition active:scale-95',
+              time === 'asap'
+                ? 'border-brand-600 bg-brand-600 text-white'
+                : 'border-line bg-white text-ink-soft hover:border-brand-300',
+            )}
+          >
+            ⚡ Lo antes posible
+          </button>
+
+          {slots.map((slot) => (
+            <button
+              key={slot.value}
+              type="button"
+              onClick={() => setTime(slot.value)}
+              className={cn(
+                'no-tap-highlight rounded-full border-2 px-4 py-2 text-sm font-extrabold transition active:scale-95',
+                time === slot.value
+                  ? 'border-brand-600 bg-brand-600 text-white'
+                  : 'border-line bg-white text-ink-soft hover:border-brand-300',
+              )}
+            >
+              {prettyTime(slot.value)}
+            </button>
+          ))}
+        </div>
+
+        <p className="mt-2 text-xs font-semibold text-ink-faint">
+          {slots.length > 0
+            ? `⏱️ Tiempo de preparación aproximado: ${config.preparationTime} min`
+            : 'Ya no hay horarios disponibles hoy. Puedes mandar el pedido y Mony te confirma la hora.'}
+        </p>
+      </section>
+    </Modal>
+  )
+}
+
+export default DeliveryModal

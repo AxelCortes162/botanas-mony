@@ -1,28 +1,158 @@
+@import 'tailwindcss';
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* ------------------------------------------------------------------
+   Tokens de marca Botanas Mony (Tailwind v4)
+   Cada variable aquí genera utilidades: --color-brand-500 -> bg-brand-500
+------------------------------------------------------------------- */
+@theme {
+  --color-brand-50: #fff5eb;
+  --color-brand-100: #ffe6cc;
+  --color-brand-200: #ffcd99;
+  --color-brand-300: #ffb266;
+  --color-brand-400: #ff9c33;
+  --color-brand-500: #ff8a00;
+  --color-brand-600: #ff6b00;
+  --color-brand-700: #d14e00;
+  --color-brand-800: #a13c00;
+  --color-brand-900: #7a2e00;
+
+  --color-chili-500: #e63946;
+  --color-chili-600: #c92a3a;
+
+  --color-lima-500: #6aa84f;
+  --color-lima-600: #518038;
+
+  --color-ink: #241a14;
+  --color-ink-soft: #6b5b52;
+  --color-ink-faint: #9c8d84;
+
+  --color-cream: #fffaf3;
+  --color-cream-deep: #fdf0e2;
+  --color-line: #f2e4d5;
+
+  --font-display: 'Baloo 2', 'Segoe UI', system-ui, sans-serif;
+  --font-sans: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+
+  --radius-card: 1.25rem;
+
+  --shadow-soft: 0 2px 10px rgb(36 26 20 / 0.06), 0 8px 24px rgb(36 26 20 / 0.06);
+  --shadow-lift: 0 6px 16px rgb(36 26 20 / 0.1), 0 16px 40px rgb(36 26 20 / 0.12);
+  --shadow-glow: 0 8px 24px rgb(255 107 0 / 0.35);
+
+  --animate-pop-in: pop-in 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-slide-up: slide-up 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-fade-in: fade-in 0.2s ease-out;
+  --animate-float: float 2.4s ease-in-out infinite;
+
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.94) translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-12px);
+    }
+  }
 }
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-  background-color: #f5f5f5;
-  color: #333;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+/* ------------------------------------------------------------------
+   Base
+------------------------------------------------------------------- */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
 
-/* Mejorar scroll en iOS */
-@supports (-webkit-overflow-scrolling: touch) {
   body {
-    -webkit-overflow-scrolling: touch;
+    background-color: var(--color-cream-deep);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior-y: none;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+
+  /* Evita el zoom automático de iOS al enfocar un campo */
+  @media screen and (max-width: 768px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-600);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
-/* Evitar zoom en inputs en iOS */
-@media screen and (max-width: 768px) {
-  input, select, textarea {
-    font-size: 16px !important;
+/* ------------------------------------------------------------------
+   Utilidades propias
+------------------------------------------------------------------- */
+@utility scrollbar-slim {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-brand-200) transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
   }
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-brand-200);
+    border-radius: 999px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@utility no-tap-highlight {
+  -webkit-tap-highlight-color: transparent;
 }

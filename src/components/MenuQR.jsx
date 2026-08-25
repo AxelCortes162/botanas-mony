@@ -1,18 +1,18 @@
-import { QRCodeSVG } from 'qrcode.react';
+// src/components/MenuQR.jsx
+import { QRCodeSVG } from 'qrcode.react'
 
-const MenuQR = () => {
-  return (
-    <div style={{ textAlign: 'center', padding: '20px', background: '#fff' }}>
-      <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>¡Escanea para ver el menú!</p>
-      <QRCodeSVG 
-        value="https://botanasmony.vercel.app/" 
-        size={200}
-        fgColor="#ff8a00" // El naranja de Mony
-        level="H" // Alta calidad para que no falle al escanear
-        includeMargin={true}
-      />
+/**
+ * QR para imprimir y pegar en el puesto.
+ * No está montado en la app: se usa cuando se quiere generar el letrero.
+ */
+const MenuQR = ({ url = 'https://botanasmony.vercel.app/' }) => (
+  <div className="mx-auto w-fit rounded-3xl bg-white p-6 text-center shadow-lift">
+    <p className="font-display text-lg font-extrabold text-ink">¡Escanea para ver el menú!</p>
+    <div className="mt-3">
+      <QRCodeSVG value={url} size={200} fgColor="#ff6b00" level="H" marginSize={2} />
     </div>
-  );
-};
+    <p className="mt-3 font-display text-sm font-extrabold text-brand-700">Botanas Mony</p>
+  </div>
+)
 
-export default MenuQR;
+export default MenuQR
