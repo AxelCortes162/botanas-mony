@@ -12,7 +12,15 @@
     <meta name="theme-color" content="#ff6b00" />
 
     <link rel="icon" type="image/png" href="/logo.png" />
-    <link rel="apple-touch-icon" href="/logo.png" />
+
+    <!-- Instalable en la pantalla de inicio -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Botanas Mony" />
+    <meta name="application-name" content="Botanas Mony" />
 
     <!-- Open Graph (para cuando compartan el link por WhatsApp) -->
     <meta property="og:type" content="website" />
@@ -21,7 +29,9 @@
       property="og:description"
       content="Antójate y pide tus botanas favoritas. Personaliza ingredientes y ordena por WhatsApp."
     />
-    <meta property="og:image" content="/logolargo.png" />
+    <!-- Debe ser absoluta o WhatsApp no muestra la vista previa del link -->
+    <meta property="og:image" content="https://botanasmony.vercel.app/logolargo.png" />
+    <meta property="og:url" content="https://botanasmony.vercel.app/" />
     <meta property="og:locale" content="es_MX" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />

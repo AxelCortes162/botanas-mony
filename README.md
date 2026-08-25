@@ -73,6 +73,41 @@ horas sin querer).
 
 ---
 
+## 📱 Instalable en el celular (PWA)
+
+El menú se puede agregar a la pantalla de inicio y se abre como una app, sin
+barra del navegador. En Android sale un botón "Instalar" cuando Chrome lo
+ofrece; en iPhone se muestran las instrucciones (Compartir → Agregar a inicio),
+porque Safari no permite hacerlo con un botón. La invitación no aparece si la
+app ya está instalada, si se abrió dentro del navegador de WhatsApp o
+Instagram (ahí no existe esa opción), o si el cliente dijo que no en los
+últimos 30 días.
+
+También funciona **sin internet**: abre y muestra el último menú que vio.
+Obviamente no se puede mandar el pedido sin conexión.
+
+### Cómo se mantiene actualizado
+
+`public/sw.js` es el service worker. Está escrito a mano, a propósito, y con
+reglas conservadoras: el HTML va siempre a la red primero, así que **con
+internet nadie se queda atrapado en una versión vieja**.
+
+No hace falta tocar nada al desplegar: el plugin `sw-build-id` de
+`vite.config.js` sella el service worker en cada `npm run build` con la huella
+del compilado y la lista de archivos. Eso es lo que hace que el navegador note
+que hay versión nueva y salga el aviso "Hay una versión nueva del menú".
+
+Un detalle de comportamiento: al aceptar la actualización se recargan **todas**
+las pestañas abiertas de la app (la del navegador y la instalada). El carrito
+sobrevive porque se guarda solo, pero lo que estuviera a medio escribir en la
+pantalla de entrega se pierde.
+
+Los iconos están en `public/icons/`. Si cambia el logo hay que regenerarlos en
+los cuatro tamaños; el `maskable` necesita el dibujo dentro del 80% central,
+porque Android le recorta los bordes.
+
+---
+
 ## 📁 Estructura
 
 ```

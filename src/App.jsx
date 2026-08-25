@@ -10,6 +10,7 @@ import CartModal from './components/CartModal/CartModal'
 import DeliveryModal from './components/DeliveryModal/DeliveryModal'
 import TransferModal from './components/TransferModal/TransferModal'
 import AdminModal from './components/AdminModal/AdminModal'
+import InstallCard from './components/PwaPrompts/InstallCard'
 
 import { useStore } from './context/StoreContext'
 import { useCart } from './context/CartContext'
@@ -155,6 +156,8 @@ function App() {
           </p>
         </div>
       )}
+
+      <InstallCard />
 
       <MenuToolbar
         query={query}
