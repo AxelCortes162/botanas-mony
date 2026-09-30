@@ -20,9 +20,24 @@ export const buildOrderMessage = ({ items, subtotal, delivery, payment }) => {
     const qty = item.qty > 1 ? `${item.qty}× ` : ''
     lines.push(`📦 *${index + 1}. ${qty}${item.name}*${half} — ${money(item.unitPrice * item.qty)}`)
 
-    if (item.added?.length) lines.push(`   ➕ Con: ${item.added.join(', ')}`)
-    if (item.removed?.length) lines.push(`   ➖ Sin: ${item.removed.join(', ')}`)
-    if (item.note) lines.push(`   📝 Nota: ${item.note}`)
+    // La lista COMPLETA de lo que va en el vaso: esta línea es la instrucción
+    // de preparación. Antes solo se mandaban los cambios (con/sin) y había que
+    // acordarse de memoria de la receta base de cada producto.
+    const hasChanges = Boolean(item.added?.length || item.removed?.length)
+
+    if (item.ingredients?.length) {
+      lines.push(`   🥗 *LLEVA:* ${item.ingredients.join(', ')}`)
+    } else if (hasChanges) {
+      // Personalizable al que le quitaron todo
+      lines.push('   🥗 *LLEVA:* nada, solo el producto')
+    }
+
+    // Los cambios van aparte para que salten a la vista y no se prepare en
+    // automático como siempre
+    if (item.added?.length) lines.push(`   ➕ _Extra:_ ${item.added.join(', ')}`)
+    if (item.removed?.length) lines.push(`   ➖ _SIN:_ ${item.removed.join(', ')}`)
+    if (item.note) lines.push(`   📝 _Nota:_ ${item.note}`)
+
     lines.push('')
   })
 
