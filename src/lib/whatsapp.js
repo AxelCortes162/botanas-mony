@@ -67,7 +67,7 @@ export const buildOrderMessage = ({ items, subtotal, delivery, payment }) => {
   // Va con los productos: es algo más que Mony tiene que preparar
   if (delivery?.reward) {
     const { nombre, puntos } = delivery.reward
-    lines.push(`🎁 *PREMIO GRATIS: ${nombre}* (${puntos} puntos · código ${delivery.rewardCode})`, '')
+    lines.push(`🎁 *PREMIO GRATIS: ${nombre}* (${puntos} puntos)`, '')
   }
 
   lines.push(RULE)

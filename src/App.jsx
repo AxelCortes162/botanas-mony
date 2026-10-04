@@ -1,5 +1,5 @@
 // src/App.jsx
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import Header from './components/Header/Header'
 import MenuToolbar from './components/MenuToolbar/MenuToolbar'
@@ -10,6 +10,7 @@ import CartModal from './components/CartModal/CartModal'
 import DeliveryModal from './components/DeliveryModal/DeliveryModal'
 import TransferModal from './components/TransferModal/TransferModal'
 import AdminModal from './components/AdminModal/AdminModal'
+import PointsScreen from './components/PointsScreen/PointsScreen'
 import InstallCard from './components/PwaPrompts/InstallCard'
 
 import { useStore } from './context/StoreContext'
@@ -28,6 +29,22 @@ function App() {
   const [category, setCategory] = useState('Todo')
   const [activeProduct, setActiveProduct] = useState(null)
   const [modal, setModal] = useState(null) // 'cart' | 'delivery' | 'transfer' | 'admin'
+
+  // "Mis puntos" va por el hash y no por `modal`: los avisos abren la app
+  // directo en /#puntos, y se puede abrir encima de los datos de entrega.
+  const [showPoints, setShowPoints] = useState(() => window.location.hash === '#puntos')
+
+  useEffect(() => {
+    const sync = () => setShowPoints(window.location.hash === '#puntos')
+    window.addEventListener('hashchange', sync)
+    return () => window.removeEventListener('hashchange', sync)
+  }, [])
+
+  const closePoints = () => {
+    // replaceState no dispara hashchange: se cierra a mano
+    window.history.replaceState(null, '', window.location.pathname + window.location.search)
+    setShowPoints(false)
+  }
 
   const visibleProducts = useMemo(() => {
     const needle = normalize(query.trim())
@@ -231,6 +248,7 @@ function App() {
           config={store.todayDelivery}
           subtotal={cart.subtotal}
           now={store.clock}
+          pointsOpen={showPoints}
           onClose={() => setModal('cart')}
           onConfirm={handleSendOrder}
         />
@@ -241,6 +259,9 @@ function App() {
       )}
 
       {modal === 'admin' && <AdminModal onClose={() => setModal(null)} />}
+
+      {/* Al final para quedar encima si se abre desde los datos de entrega */}
+      {showPoints && <PointsScreen onClose={closePoints} />}
     </div>
   )
 }

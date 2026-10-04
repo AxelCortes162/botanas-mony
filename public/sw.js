@@ -164,3 +164,55 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(staleWhileRevalidate(request))
   }
 })
+
+/* ------------------------------ Avisos de puntos -----------------------------
+   De ../tocaaqui/c/sw.js: los manda tocaaqui cuando Mony da puntos o publica
+   una oferta. El título, el icono y a dónde lleva vienen en cada aviso. */
+
+self.addEventListener('push', (evento) => {
+  let datos = {}
+  try {
+    datos = evento.data ? evento.data.json() : {}
+  } catch {
+    datos = { cuerpo: evento.data ? evento.data.text() : '' }
+  }
+
+  evento.waitUntil(
+    self.registration.showNotification(datos.titulo || 'Tus puntos', {
+      body: datos.cuerpo || '',
+      icon: datos.icono,
+      // Android pinta este icono en blanco usando solo su silueta: tiene que ser
+      // un PNG transparente (iconos/<negocio>/badge.png), no el logo con fondo.
+      badge: datos.badge,
+      // La foto de la oferta, grande debajo del texto (Chrome en Android)
+      image: datos.imagen,
+      // Cualquier toque abre la pagina de puntos (ver notificationclick)
+      actions: [{ action: 'puntos', title: 'Ver mis puntos' }],
+      // Con el mismo tag, un aviso nuevo reemplaza al anterior en vez de apilarse.
+      tag: datos.tag || 'puntos',
+      renotify: Boolean(datos.tag),
+      // Aquí no existe /c/ como en tocaaqui: sin url, a la pantalla de puntos
+      data: { url: datos.url || '/#puntos' },
+    }),
+  )
+})
+
+self.addEventListener('notificationclick', (evento) => {
+  evento.notification.close()
+  const destino = evento.notification.data?.url || '/#puntos'
+
+  evento.waitUntil(
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((ventanas) => {
+        // Si la app ya está abierta, la enfoca en vez de abrir otra
+        for (const ventana of ventanas) {
+          if ('focus' in ventana) {
+            if ('navigate' in ventana) ventana.navigate(destino).catch(() => {})
+            return ventana.focus()
+          }
+        }
+        return self.clients.openWindow(destino)
+      }),
+  )
+})

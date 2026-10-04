@@ -4,13 +4,12 @@ import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import { generateTimeSlots } from '../../lib/schedule'
 import { cn, money, prettyTime } from '../../lib/format'
-import { normalizePhone, POINTS_URL } from '../../lib/whatsapp'
-
-const REWARDS_URL = 'https://tocaaqui.app/api/puntos?premios=mony'
+import { normalizePhone } from '../../lib/whatsapp'
+import { currentCode, getSavedPhone, getToken, loadAccount, loadInfo } from '../../lib/puntos'
 
 const newOrderId = () => crypto.randomUUID().replace(/-/g, '').slice(0, 8)
 
-const DeliveryModal = ({ config, subtotal, now, onClose, onConfirm }) => {
+const DeliveryModal = ({ config, subtotal, now, pointsOpen, onClose, onConfirm }) => {
   // `now` viene del reloj del contexto: así las horas ya pasadas desaparecen
   // aunque el cliente deje el modal abierto un buen rato.
   const slots = useMemo(() => generateTimeSlots(config, now), [config, now])
@@ -42,25 +41,39 @@ const DeliveryModal = ({ config, subtotal, now, onClose, onConfirm }) => {
   // que la pantalla no muestra).
   const [method, setMethod] = useState(() => methods[0]?.key ?? 'pickup')
   const [customerName, setCustomerName] = useState('')
-  const [phone, setPhone] = useState('')
+  const [phone, setPhone] = useState(getSavedPhone)
   const [address, setAddress] = useState('')
   const [time, setTime] = useState('asap')
   const [showRewards, setShowRewards] = useState(false)
-  const [rewards, setRewards] = useState([])
+  const [points, setPoints] = useState(null) // { saldo, premios }
   const [rewardId, setRewardId] = useState('')
   const [rewardCode, setRewardCode] = useState('')
   const [errors, setErrors] = useState({})
 
-  // Los premios los maneja Mony desde su caja en tocaaqui. Si no contestan,
+  // Se lee en cada render: si se registra en "Mis puntos" con este modal
+  // abierto, al volver ya trae su token (pointsOpen cambia y vuelve a pintar).
+  const token = pointsOpen ? '' : getToken()
+
+  // Saldo y premios (los maneja Mony desde su caja). Si tocaaqui no contesta,
   // la sección no aparece y el pedido sigue igual que siempre.
   useEffect(() => {
-    const controller = new AbortController()
-    fetch(REWARDS_URL, { signal: controller.signal })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data) => setRewards(Array.isArray(data?.premios) ? data.premios : []))
+    if (!token) return undefined
+    let cancelled = false
+    Promise.all([loadAccount(token), loadInfo()])
+      .then(([account, info]) => {
+        if (cancelled) return
+        setPoints({ saldo: account.saldo, premios: info.premios ?? [] })
+        // Si se acaba de registrar con el modal abierto, su celular aún no estaba
+        setPhone((current) => current || getSavedPhone())
+      })
       .catch(() => {})
-    return () => controller.abort()
-  }, [])
+    return () => {
+      cancelled = true
+    }
+  }, [token])
+
+  const affordable = points?.premios.filter((option) => option.puntos <= points.saldo) ?? []
+  const nextReward = points?.premios.find((option) => option.puntos > points.saldo)
 
   // El modal sigue abierto mientras el cliente escribe: si el admin desactiva
   // el método elegido en ese rato, hay que cambiarlo o se cobraría un envío
@@ -78,18 +91,35 @@ const DeliveryModal = ({ config, subtotal, now, onClose, onConfirm }) => {
   // El premio es un producto extra gratis: no cambia lo que se paga
   const finalTotal = subtotal + deliveryCost
 
-  // El premio solo cuenta con un celular válido. Si le alcanzan los puntos y
-  // si el código es bueno solo lo sabe tocaaqui, cuando Mony confirma.
+  // El premio va con el celular del pedido: sin uno válido no hay a quién
+  // descontarle los puntos. tocaaqui revisa todo cuando Mony confirma.
   const validPhone = normalizePhone(phone)
-  const reward = validPhone ? rewards.find((option) => String(option.id) === rewardId) : undefined
+  const reward = validPhone
+    ? affordable.find((option) => String(option.id) === rewardId)
+    : undefined
+
+  // El código lo calcula la app, el cliente nunca lo escribe. Sirve 12 horas,
+  // así que basta con sacarlo al elegir el premio. Se calcula aquí y no al
+  // tocar "Enviar": esperar ahí haría que el navegador bloquee WhatsApp.
+  useEffect(() => {
+    if (!reward || !token) return undefined
+    let cancelled = false
+    loadInfo()
+      .then(() => currentCode(token))
+      .then((code) => !cancelled && setRewardCode(code))
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [reward, token])
 
   const handleConfirm = () => {
     const nextErrors = {}
     if (!customerName.trim()) nextErrors.customerName = 'Necesitamos tu nombre'
     if (activeMethod === 'delivery' && !address.trim()) nextErrors.address = 'Escribe la dirección'
     if (phone.trim() && !validPhone) nextErrors.phone = 'Escribe tu celular a 10 dígitos'
-    if (reward && !/^\d{4}$/.test(rewardCode)) {
-      nextErrors.rewardCode = 'Para tu premio, escribe tu código de 4 dígitos'
+    if (reward && !rewardCode) {
+      nextErrors.reward = 'Un momento, estamos preparando tu premio. Vuelve a tocar el botón.'
       setShowRewards(true)
     }
 
@@ -256,9 +286,19 @@ const DeliveryModal = ({ config, subtotal, now, onClose, onConfirm }) => {
           )}
         </div>
 
-        {/* Premio: plegado, solo se abre con un celular válido, y no aparece
-            si tocaaqui no contestó con la lista de premios */}
-        {rewards.length > 0 && (
+        {/* Sin cuenta de puntos: solo la invitación. Con cuenta: canjear lo
+            que ya le alcanza, o cuánto le falta para el primero. */}
+        {!token ? (
+          <a href="#puntos" className="block text-xs font-extrabold text-brand-700 underline">
+            🎁 ¿Juntas puntos? Ve a Mis puntos
+          </a>
+        ) : points && affordable.length === 0 ? (
+          nextReward && (
+            <p className="rounded-2xl bg-brand-50 px-4 py-3 text-xs font-bold text-brand-900">
+              🎁 Te faltan {nextReward.puntos - points.saldo} puntos para {nextReward.nombre}
+            </p>
+          )
+        ) : points ? (
           <div className="rounded-2xl border-2 border-line bg-white">
             <button
               type="button"
@@ -268,79 +308,42 @@ const DeliveryModal = ({ config, subtotal, now, onClose, onConfirm }) => {
               className="no-tap-highlight flex w-full items-center justify-between px-4 py-3 text-left text-sm font-extrabold text-ink disabled:text-ink-faint"
             >
               <span>
-                🎁 ¿Ya te alcanza para un premio?
-                {!validPhone && (
-                  <span className="block text-[11px] font-semibold">Primero escribe tu celular</span>
-                )}
+                🎁 Canjear un premio
+                <span className="block text-[11px] font-semibold text-ink-faint">
+                  {validPhone ? `Tienes ${points.saldo} puntos` : 'Primero escribe tu celular'}
+                </span>
               </span>
               <span aria-hidden="true">{showRewards && validPhone ? '▲' : '▼'}</span>
             </button>
 
             {showRewards && validPhone && (
-              <div className="space-y-3 border-t border-line px-4 pb-4 pt-3">
-                <div>
-                  <label
-                    htmlFor="reward"
-                    className="mb-1.5 block text-xs font-extrabold uppercase tracking-wide text-ink-faint"
-                  >
-                    Premio
-                  </label>
-                  <select
-                    id="reward"
-                    value={rewardId}
-                    onChange={(event) => setRewardId(event.target.value)}
-                    className="w-full rounded-2xl border-2 border-line bg-white px-4 py-3 text-sm font-semibold text-ink focus:border-brand-400 focus:outline-none"
-                  >
-                    <option value="">Ninguno por ahora</option>
-                    {rewards.map((option) => (
-                      <option key={option.id} value={String(option.id)}>
-                        {option.nombre} · {option.puntos} puntos
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {reward && (
-                  <div>
-                    <label
-                      htmlFor="reward-code"
-                      className="mb-1.5 block text-xs font-extrabold uppercase tracking-wide text-ink-faint"
-                    >
-                      Tu código
-                    </label>
-                    <input
-                      id="reward-code"
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="off"
-                      maxLength={4}
-                      value={rewardCode}
-                      onChange={(event) =>
-                        setRewardCode(event.target.value.replace(/\D/g, '').slice(0, 4))
-                      }
-                      placeholder="4 dígitos"
-                      className={cn(
-                        'w-full rounded-2xl border-2 bg-white px-4 py-3 text-sm font-semibold tracking-widest text-ink placeholder:font-medium placeholder:tracking-normal placeholder:text-ink-faint focus:outline-none',
-                        errors.rewardCode ? 'border-chili-500' : 'border-line focus:border-brand-400',
-                      )}
-                    />
-                    {errors.rewardCode && (
-                      <p className="mt-1 text-xs font-bold text-chili-600">{errors.rewardCode}</p>
-                    )}
-                  </div>
-                )}
-                <a
-                  href={POINTS_URL}
-                  target="_blank"
-                  rel="noopener"
-                  className="inline-block text-xs font-extrabold text-brand-700 underline"
+              <div className="border-t border-line px-4 pb-4 pt-3">
+                <label
+                  htmlFor="reward"
+                  className="mb-1.5 block text-xs font-extrabold uppercase tracking-wide text-ink-faint"
                 >
-                  Ver mis puntos y mi código ↗
-                </a>
+                  Premio gratis
+                </label>
+                <select
+                  id="reward"
+                  value={reward ? rewardId : ''}
+                  onChange={(event) => setRewardId(event.target.value)}
+                  className="w-full rounded-2xl border-2 border-line bg-white px-4 py-3 text-sm font-semibold text-ink focus:border-brand-400 focus:outline-none"
+                >
+                  <option value="">Ninguno por ahora</option>
+                  {affordable.map((option) => (
+                    <option key={option.id} value={String(option.id)}>
+                      {option.nombre} · {option.puntos} puntos
+                    </option>
+                  ))}
+                </select>
+                {errors.reward && (
+                  <p className="mt-1 text-xs font-bold text-chili-600">{errors.reward}</p>
+                )}
               </div>
             )}
           </div>
-        )}
+        ) : null}
 
         {activeMethod === 'delivery' && (
           <div>
