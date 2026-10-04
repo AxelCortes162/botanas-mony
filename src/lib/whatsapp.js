@@ -16,8 +16,10 @@ export const normalizePhone = (value) => {
  * Enlace que Mony toca cuando ya cobró: tocaaqui lo lee tal cual. Va después
  * del # para que el teléfono y el código no viajen a ningún servidor.
  */
-export const pointsCashierUrl = ({ phone, finalTotal, reward, rewardCode, orderId }) => {
+export const pointsCashierUrl = ({ phone, finalTotal, deliveryCost, reward, rewardCode, orderId }) => {
   const params = new URLSearchParams({ tel: phone, total: String(finalTotal) })
+  // El envío no da puntos: tocaaqui lo resta del total antes de calcularlos
+  if (deliveryCost > 0) params.set('envio', String(deliveryCost))
   if (reward) {
     params.set('premio', String(reward.id))
     params.set('codigo', rewardCode)
