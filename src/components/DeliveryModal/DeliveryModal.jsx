@@ -4,6 +4,9 @@ import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import { generateTimeSlots } from '../../lib/schedule'
 import { cn, money, prettyTime } from '../../lib/format'
+import { normalizePhone, POINTS_URL } from '../../lib/whatsapp'
+
+const newOrderId = () => crypto.randomUUID().replace(/-/g, '').slice(0, 8)
 
 const DeliveryModal = ({ config, subtotal, now, onClose, onConfirm }) => {
   // `now` viene del reloj del contexto: así las horas ya pasadas desaparecen
@@ -40,6 +43,9 @@ const DeliveryModal = ({ config, subtotal, now, onClose, onConfirm }) => {
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
   const [time, setTime] = useState('asap')
+  const [showPoints, setShowPoints] = useState(false)
+  const [pointsInput, setPointsInput] = useState('')
+  const [pointsCode, setPointsCode] = useState('')
   const [errors, setErrors] = useState({})
 
   // El modal sigue abierto mientras el cliente escribe: si el admin desactiva
@@ -55,12 +61,28 @@ const DeliveryModal = ({ config, subtotal, now, onClose, onConfirm }) => {
   // el modal abierto, no se puede seguir cobrando un envío que ya no existe.
   const activeMethod = methods.some((option) => option.key === method) ? method : null
   const deliveryCost = activeMethod === 'delivery' ? Number(config.deliveryCost) || 0 : 0
-  const finalTotal = subtotal + deliveryCost
+  const orderTotal = subtotal + deliveryCost
+
+  // Los puntos solo cuentan con un celular válido. Cuántos tiene el cliente y
+  // si el código es bueno solo lo sabe tocaaqui, cuando Mony confirma.
+  const validPhone = normalizePhone(phone)
+  const points = validPhone && /^\d+$/.test(pointsInput) ? Number(pointsInput) : 0
+  const pointsDiscount = points >= 1 && points <= orderTotal ? points : 0
+  const finalTotal = orderTotal - pointsDiscount
 
   const handleConfirm = () => {
     const nextErrors = {}
     if (!customerName.trim()) nextErrors.customerName = 'Necesitamos tu nombre'
     if (activeMethod === 'delivery' && !address.trim()) nextErrors.address = 'Escribe la dirección'
+    if (phone.trim() && !validPhone) nextErrors.phone = 'Escribe tu celular a 10 dígitos'
+
+    if (validPhone && (pointsInput.trim() || pointsCode.trim())) {
+      if (!pointsDiscount) {
+        nextErrors.points = `Escribe cuántos puntos usar (de 1 a ${Math.floor(orderTotal)})`
+      }
+      if (!/^\d{4}$/.test(pointsCode)) nextErrors.pointsCode = 'El código es de 4 dígitos'
+      if (Object.keys(nextErrors).some((key) => key.startsWith('points'))) setShowPoints(true)
+    }
 
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0) return
@@ -68,10 +90,14 @@ const DeliveryModal = ({ config, subtotal, now, onClose, onConfirm }) => {
     onConfirm({
       method: activeMethod ?? 'pickup',
       customerName: customerName.trim(),
-      phone: phone.trim(),
+      phone: validPhone,
       address: activeMethod === 'delivery' ? address.trim() : config.address,
       time,
       deliveryCost,
+      orderTotal,
+      points: pointsDiscount,
+      pointsCode: pointsDiscount ? pointsCode : '',
+      orderId: newOrderId(),
       finalTotal,
     })
   }
@@ -95,8 +121,16 @@ const DeliveryModal = ({ config, subtotal, now, onClose, onConfirm }) => {
                 <span>+{money(deliveryCost)}</span>
               </div>
             )}
+            {pointsDiscount > 0 && (
+              <div className="flex justify-between text-lima-600">
+                <span>🎁 Puntos</span>
+                <span>−{money(pointsDiscount)}</span>
+              </div>
+            )}
             <div className="flex items-center justify-between border-t border-line pt-2">
-              <span className="font-display text-base font-extrabold text-ink">Total</span>
+              <span className="font-display text-base font-extrabold text-ink">
+                {pointsDiscount > 0 ? 'Total a pagar' : 'Total'}
+              </span>
               <span className="font-display text-2xl font-extrabold text-brand-700">
                 {money(finalTotal)}
               </span>
@@ -191,7 +225,7 @@ const DeliveryModal = ({ config, subtotal, now, onClose, onConfirm }) => {
             htmlFor="customer-phone"
             className="mb-1.5 block text-xs font-extrabold uppercase tracking-wide text-ink-faint"
           >
-            📱 Teléfono (opcional)
+            📱 Tu celular (para juntar puntos)
           </label>
           <input
             id="customer-phone"
@@ -200,9 +234,103 @@ const DeliveryModal = ({ config, subtotal, now, onClose, onConfirm }) => {
             autoComplete="tel"
             value={phone}
             onChange={(event) => setPhone(event.target.value)}
-            placeholder="10 dígitos"
-            className="w-full rounded-2xl border-2 border-line bg-white px-4 py-3 text-sm font-semibold text-ink placeholder:font-medium placeholder:text-ink-faint focus:border-brand-400 focus:outline-none"
+            placeholder="10 dígitos (opcional)"
+            aria-describedby="customer-phone-hint"
+            className={cn(
+              'w-full rounded-2xl border-2 bg-white px-4 py-3 text-sm font-semibold text-ink placeholder:font-medium placeholder:text-ink-faint focus:outline-none',
+              errors.phone ? 'border-chili-500' : 'border-line focus:border-brand-400',
+            )}
           />
+          {errors.phone ? (
+            <p className="mt-1 text-xs font-bold text-chili-600">{errors.phone}</p>
+          ) : (
+            <p id="customer-phone-hint" className="mt-1 text-[11px] font-semibold text-ink-faint">
+              Ganas 1 punto por cada $10. Cada punto vale $1.
+            </p>
+          )}
+        </div>
+
+        {/* Usar puntos: plegado, y solo se abre con un celular válido */}
+        <div className="rounded-2xl border-2 border-line bg-white">
+          <button
+            type="button"
+            disabled={!validPhone}
+            aria-expanded={showPoints && Boolean(validPhone)}
+            onClick={() => setShowPoints((open) => !open)}
+            className="no-tap-highlight flex w-full items-center justify-between px-4 py-3 text-left text-sm font-extrabold text-ink disabled:text-ink-faint"
+          >
+            <span>
+              🎁 ¿Tienes puntos? Úsalos
+              {!validPhone && (
+                <span className="block text-[11px] font-semibold">Primero escribe tu celular</span>
+              )}
+            </span>
+            <span aria-hidden="true">{showPoints && validPhone ? '▲' : '▼'}</span>
+          </button>
+
+          {showPoints && validPhone && (
+            <div className="space-y-3 border-t border-line px-4 pb-4 pt-3">
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label
+                    htmlFor="points-amount"
+                    className="mb-1.5 block text-xs font-extrabold uppercase tracking-wide text-ink-faint"
+                  >
+                    Puntos a usar
+                  </label>
+                  <input
+                    id="points-amount"
+                    type="text"
+                    inputMode="numeric"
+                    value={pointsInput}
+                    onChange={(event) => setPointsInput(event.target.value.replace(/\D/g, ''))}
+                    placeholder="Ej. 20"
+                    className={cn(
+                      'w-full rounded-2xl border-2 bg-white px-4 py-3 text-sm font-semibold text-ink placeholder:font-medium placeholder:text-ink-faint focus:outline-none',
+                      errors.points ? 'border-chili-500' : 'border-line focus:border-brand-400',
+                    )}
+                  />
+                </div>
+                <div className="flex-1">
+                  <label
+                    htmlFor="points-code"
+                    className="mb-1.5 block text-xs font-extrabold uppercase tracking-wide text-ink-faint"
+                  >
+                    Código
+                  </label>
+                  <input
+                    id="points-code"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    maxLength={4}
+                    value={pointsCode}
+                    onChange={(event) =>
+                      setPointsCode(event.target.value.replace(/\D/g, '').slice(0, 4))
+                    }
+                    placeholder="4 dígitos"
+                    className={cn(
+                      'w-full rounded-2xl border-2 bg-white px-4 py-3 text-sm font-semibold tracking-widest text-ink placeholder:font-medium placeholder:tracking-normal placeholder:text-ink-faint focus:outline-none',
+                      errors.pointsCode ? 'border-chili-500' : 'border-line focus:border-brand-400',
+                    )}
+                  />
+                </div>
+              </div>
+              {(errors.points || errors.pointsCode) && (
+                <p className="text-xs font-bold text-chili-600">
+                  {[errors.points, errors.pointsCode].filter(Boolean).join(' · ')}
+                </p>
+              )}
+              <a
+                href={POINTS_URL}
+                target="_blank"
+                rel="noopener"
+                className="inline-block text-xs font-extrabold text-brand-700 underline"
+              >
+                Ver mis puntos y mi código ↗
+              </a>
+            </div>
+          )}
         </div>
 
         {activeMethod === 'delivery' && (

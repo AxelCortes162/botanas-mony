@@ -112,7 +112,13 @@ function App() {
 
     setModal(null)
     cart.clear()
-    toast('¡Pedido enviado! Al pagar, manda tu comprobante con 💳', 'success', 5000)
+    toast(
+      delivery.phone
+        ? '¡Pedido enviado! Al pagar, manda tu comprobante con 💳. Cuando Mony confirme tu pago te llegan tus puntos 🎁'
+        : '¡Pedido enviado! Al pagar, manda tu comprobante con 💳',
+      'success',
+      delivery.phone ? 7000 : 5000,
+    )
   }
 
   /* -------------------------------- Carga --------------------------------- */

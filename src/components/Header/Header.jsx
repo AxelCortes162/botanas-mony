@@ -1,5 +1,6 @@
 // src/components/Header/Header.jsx
 import { cn } from '../../lib/format'
+import { POINTS_URL } from '../../lib/whatsapp'
 
 const Header = ({ isStoreOpen, isOnline, scheduleLabel }) => (
   <header className="relative overflow-hidden bg-linear-to-b from-brand-500 to-brand-600 px-5 pb-5 pt-[max(0.75rem,env(safe-area-inset-top))] text-center">
@@ -51,6 +52,15 @@ const Header = ({ isStoreOpen, isOnline, scheduleLabel }) => (
           />
           {scheduleLabel ?? (isStoreOpen ? 'Abierto ahora' : 'Cerrado')}
         </span>
+
+        <a
+          href={POINTS_URL}
+          target="_blank"
+          rel="noopener"
+          className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1 text-xs font-extrabold text-brand-700 transition hover:bg-white active:scale-95"
+        >
+          🎁 Mis puntos
+        </a>
 
         {!isOnline && (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold text-white">

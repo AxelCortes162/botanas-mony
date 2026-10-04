@@ -3,6 +3,29 @@ import { money, prettyTime } from './format'
 
 const RULE = '━━━━━━━━━━━━━━━━━━'
 
+export const POINTS_URL = 'https://tocaaqui.app/c/mony'
+
+/** 10 dígitos o '' si no se puede. Acepta espacios, guiones y +52 / 52 al inicio. */
+export const normalizePhone = (value) => {
+  const digits = String(value ?? '').replace(/\D/g, '')
+  const local = digits.length > 10 && digits.startsWith('52') ? digits.slice(-10) : digits
+  return local.length === 10 ? local : ''
+}
+
+/**
+ * Enlace que Mony toca cuando ya cobró: tocaaqui lo lee tal cual. Va después
+ * del # para que el teléfono y el código no viajen a ningún servidor.
+ */
+export const pointsCashierUrl = ({ phone, orderTotal, points, pointsCode, orderId }) => {
+  const params = new URLSearchParams({ tel: phone, total: String(orderTotal) })
+  if (points > 0) {
+    params.set('puntos', String(points))
+    params.set('codigo', pointsCode)
+  }
+  params.set('pedido', orderId)
+  return `${POINTS_URL}/caja#${params}`
+}
+
 /**
  * Construye el mensaje de WhatsApp con el resumen del pedido.
  * Se mantiene fuera de los componentes para poder probarlo y ajustarlo
@@ -54,7 +77,12 @@ export const buildOrderMessage = ({ items, subtotal, delivery, payment }) => {
     lines.push('')
     lines.push(`Subtotal: ${money(subtotal)}`)
     if (delivery.deliveryCost > 0) lines.push(`Envío: ${money(delivery.deliveryCost)}`)
-    lines.push(`💰 *TOTAL: ${money(delivery.finalTotal)}*`)
+    if (delivery.points > 0) {
+      lines.push(`🎁 Puntos: −${money(delivery.points)} (código ${delivery.pointsCode})`)
+      lines.push(`💰 *TOTAL A PAGAR: ${money(delivery.finalTotal)}*`)
+    } else {
+      lines.push(`💰 *TOTAL: ${money(delivery.finalTotal)}*`)
+    }
   } else {
     lines.push(`💰 *TOTAL: ${money(subtotal)}*`)
   }
@@ -62,6 +90,10 @@ export const buildOrderMessage = ({ items, subtotal, delivery, payment }) => {
   lines.push(RULE, '')
   lines.push(`✅ Pago por transferencia a ${payment?.banco ?? 'la cuenta del negocio'}.`)
   lines.push('Enseguida envío mi comprobante 📸')
+
+  if (delivery?.phone) {
+    lines.push('', '🎁 *Para Mony, cuando ya esté pagado:*', pointsCashierUrl(delivery))
+  }
 
   return lines.join('\n')
 }
