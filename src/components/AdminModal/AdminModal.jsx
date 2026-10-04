@@ -9,6 +9,7 @@ import DeliveryTab from './DeliveryTab'
 import { useStore } from '../../context/StoreContext'
 import { useToast } from '../../context/ToastContext'
 import { cn } from '../../lib/format'
+import { POINTS_URL } from '../../lib/whatsapp'
 
 const TABS = [
   { key: 'status', icon: '🏪', label: 'Tienda' },
@@ -35,6 +36,17 @@ const AdminModal = ({ onClose }) => {
 
   return (
     <Modal title="Administración" icon="⚙️" size="lg" onClose={onClose}>
+      {/* Fuera del inicio de sesión: la caja tiene su propia clave en tocaaqui */}
+      <a
+        href={`${POINTS_URL}/caja`}
+        target="_blank"
+        rel="noopener"
+        className="no-tap-highlight mb-4 flex items-center justify-between rounded-2xl border-2 border-brand-200 bg-brand-50 px-4 py-3 text-sm font-extrabold text-brand-900 transition hover:border-brand-400 active:scale-[0.99]"
+      >
+        <span>🎁 Caja de puntos y premios</span>
+        <span aria-hidden="true">↗</span>
+      </a>
+
       {!store.isAdmin ? (
         <LoginForm onSignIn={store.signIn} />
       ) : (
