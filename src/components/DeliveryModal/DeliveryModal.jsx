@@ -6,6 +6,8 @@ import { generateTimeSlots } from '../../lib/schedule'
 import { cn, money, prettyTime } from '../../lib/format'
 import { normalizePhone, POINTS_URL } from '../../lib/whatsapp'
 
+const REWARDS_URL = 'https://tocaaqui.app/api/puntos?premios=mony'
+
 const newOrderId = () => crypto.randomUUID().replace(/-/g, '').slice(0, 8)
 
 const DeliveryModal = ({ config, subtotal, now, onClose, onConfirm }) => {
@@ -43,10 +45,22 @@ const DeliveryModal = ({ config, subtotal, now, onClose, onConfirm }) => {
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
   const [time, setTime] = useState('asap')
-  const [showPoints, setShowPoints] = useState(false)
-  const [pointsInput, setPointsInput] = useState('')
-  const [pointsCode, setPointsCode] = useState('')
+  const [showRewards, setShowRewards] = useState(false)
+  const [rewards, setRewards] = useState([])
+  const [rewardId, setRewardId] = useState('')
+  const [rewardCode, setRewardCode] = useState('')
   const [errors, setErrors] = useState({})
+
+  // Los premios los maneja Mony desde su caja en tocaaqui. Si no contestan,
+  // la sección no aparece y el pedido sigue igual que siempre.
+  useEffect(() => {
+    const controller = new AbortController()
+    fetch(REWARDS_URL, { signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => setRewards(Array.isArray(data?.premios) ? data.premios : []))
+      .catch(() => {})
+    return () => controller.abort()
+  }, [])
 
   // El modal sigue abierto mientras el cliente escribe: si el admin desactiva
   // el método elegido en ese rato, hay que cambiarlo o se cobraría un envío
@@ -61,27 +75,22 @@ const DeliveryModal = ({ config, subtotal, now, onClose, onConfirm }) => {
   // el modal abierto, no se puede seguir cobrando un envío que ya no existe.
   const activeMethod = methods.some((option) => option.key === method) ? method : null
   const deliveryCost = activeMethod === 'delivery' ? Number(config.deliveryCost) || 0 : 0
-  const orderTotal = subtotal + deliveryCost
+  // El premio es un producto extra gratis: no cambia lo que se paga
+  const finalTotal = subtotal + deliveryCost
 
-  // Los puntos solo cuentan con un celular válido. Cuántos tiene el cliente y
+  // El premio solo cuenta con un celular válido. Si le alcanzan los puntos y
   // si el código es bueno solo lo sabe tocaaqui, cuando Mony confirma.
   const validPhone = normalizePhone(phone)
-  const points = validPhone && /^\d+$/.test(pointsInput) ? Number(pointsInput) : 0
-  const pointsDiscount = points >= 1 && points <= orderTotal ? points : 0
-  const finalTotal = orderTotal - pointsDiscount
+  const reward = validPhone ? rewards.find((option) => String(option.id) === rewardId) : undefined
 
   const handleConfirm = () => {
     const nextErrors = {}
     if (!customerName.trim()) nextErrors.customerName = 'Necesitamos tu nombre'
     if (activeMethod === 'delivery' && !address.trim()) nextErrors.address = 'Escribe la dirección'
     if (phone.trim() && !validPhone) nextErrors.phone = 'Escribe tu celular a 10 dígitos'
-
-    if (validPhone && (pointsInput.trim() || pointsCode.trim())) {
-      if (!pointsDiscount) {
-        nextErrors.points = `Escribe cuántos puntos usar (de 1 a ${Math.floor(orderTotal)})`
-      }
-      if (!/^\d{4}$/.test(pointsCode)) nextErrors.pointsCode = 'El código es de 4 dígitos'
-      if (Object.keys(nextErrors).some((key) => key.startsWith('points'))) setShowPoints(true)
+    if (reward && !/^\d{4}$/.test(rewardCode)) {
+      nextErrors.rewardCode = 'Para tu premio, escribe tu código de 4 dígitos'
+      setShowRewards(true)
     }
 
     setErrors(nextErrors)
@@ -94,9 +103,8 @@ const DeliveryModal = ({ config, subtotal, now, onClose, onConfirm }) => {
       address: activeMethod === 'delivery' ? address.trim() : config.address,
       time,
       deliveryCost,
-      orderTotal,
-      points: pointsDiscount,
-      pointsCode: pointsDiscount ? pointsCode : '',
+      reward: reward ?? null,
+      rewardCode: reward ? rewardCode : '',
       orderId: newOrderId(),
       finalTotal,
     })
@@ -121,16 +129,14 @@ const DeliveryModal = ({ config, subtotal, now, onClose, onConfirm }) => {
                 <span>+{money(deliveryCost)}</span>
               </div>
             )}
-            {pointsDiscount > 0 && (
+            {reward && (
               <div className="flex justify-between text-lima-600">
-                <span>🎁 Puntos</span>
-                <span>−{money(pointsDiscount)}</span>
+                <span>🎁 {reward.nombre}</span>
+                <span>Gratis</span>
               </div>
             )}
             <div className="flex items-center justify-between border-t border-line pt-2">
-              <span className="font-display text-base font-extrabold text-ink">
-                {pointsDiscount > 0 ? 'Total a pagar' : 'Total'}
-              </span>
+              <span className="font-display text-base font-extrabold text-ink">Total</span>
               <span className="font-display text-2xl font-extrabold text-brand-700">
                 {money(finalTotal)}
               </span>
@@ -245,93 +251,96 @@ const DeliveryModal = ({ config, subtotal, now, onClose, onConfirm }) => {
             <p className="mt-1 text-xs font-bold text-chili-600">{errors.phone}</p>
           ) : (
             <p id="customer-phone-hint" className="mt-1 text-[11px] font-semibold text-ink-faint">
-              Ganas 1 punto por cada $10. Cada punto vale $1.
+              Ganas 1 punto por cada $10 y los cambias por productos gratis.
             </p>
           )}
         </div>
 
-        {/* Usar puntos: plegado, y solo se abre con un celular válido */}
-        <div className="rounded-2xl border-2 border-line bg-white">
-          <button
-            type="button"
-            disabled={!validPhone}
-            aria-expanded={showPoints && Boolean(validPhone)}
-            onClick={() => setShowPoints((open) => !open)}
-            className="no-tap-highlight flex w-full items-center justify-between px-4 py-3 text-left text-sm font-extrabold text-ink disabled:text-ink-faint"
-          >
-            <span>
-              🎁 ¿Tienes puntos? Úsalos
-              {!validPhone && (
-                <span className="block text-[11px] font-semibold">Primero escribe tu celular</span>
-              )}
-            </span>
-            <span aria-hidden="true">{showPoints && validPhone ? '▲' : '▼'}</span>
-          </button>
+        {/* Premio: plegado, solo se abre con un celular válido, y no aparece
+            si tocaaqui no contestó con la lista de premios */}
+        {rewards.length > 0 && (
+          <div className="rounded-2xl border-2 border-line bg-white">
+            <button
+              type="button"
+              disabled={!validPhone}
+              aria-expanded={showRewards && Boolean(validPhone)}
+              onClick={() => setShowRewards((open) => !open)}
+              className="no-tap-highlight flex w-full items-center justify-between px-4 py-3 text-left text-sm font-extrabold text-ink disabled:text-ink-faint"
+            >
+              <span>
+                🎁 ¿Ya te alcanza para un premio?
+                {!validPhone && (
+                  <span className="block text-[11px] font-semibold">Primero escribe tu celular</span>
+                )}
+              </span>
+              <span aria-hidden="true">{showRewards && validPhone ? '▲' : '▼'}</span>
+            </button>
 
-          {showPoints && validPhone && (
-            <div className="space-y-3 border-t border-line px-4 pb-4 pt-3">
-              <div className="flex gap-3">
-                <div className="flex-1">
+            {showRewards && validPhone && (
+              <div className="space-y-3 border-t border-line px-4 pb-4 pt-3">
+                <div>
                   <label
-                    htmlFor="points-amount"
+                    htmlFor="reward"
                     className="mb-1.5 block text-xs font-extrabold uppercase tracking-wide text-ink-faint"
                   >
-                    Puntos a usar
+                    Premio
                   </label>
-                  <input
-                    id="points-amount"
-                    type="text"
-                    inputMode="numeric"
-                    value={pointsInput}
-                    onChange={(event) => setPointsInput(event.target.value.replace(/\D/g, ''))}
-                    placeholder="Ej. 20"
-                    className={cn(
-                      'w-full rounded-2xl border-2 bg-white px-4 py-3 text-sm font-semibold text-ink placeholder:font-medium placeholder:text-ink-faint focus:outline-none',
-                      errors.points ? 'border-chili-500' : 'border-line focus:border-brand-400',
-                    )}
-                  />
-                </div>
-                <div className="flex-1">
-                  <label
-                    htmlFor="points-code"
-                    className="mb-1.5 block text-xs font-extrabold uppercase tracking-wide text-ink-faint"
+                  <select
+                    id="reward"
+                    value={rewardId}
+                    onChange={(event) => setRewardId(event.target.value)}
+                    className="w-full rounded-2xl border-2 border-line bg-white px-4 py-3 text-sm font-semibold text-ink focus:border-brand-400 focus:outline-none"
                   >
-                    Código
-                  </label>
-                  <input
-                    id="points-code"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    maxLength={4}
-                    value={pointsCode}
-                    onChange={(event) =>
-                      setPointsCode(event.target.value.replace(/\D/g, '').slice(0, 4))
-                    }
-                    placeholder="4 dígitos"
-                    className={cn(
-                      'w-full rounded-2xl border-2 bg-white px-4 py-3 text-sm font-semibold tracking-widest text-ink placeholder:font-medium placeholder:tracking-normal placeholder:text-ink-faint focus:outline-none',
-                      errors.pointsCode ? 'border-chili-500' : 'border-line focus:border-brand-400',
-                    )}
-                  />
+                    <option value="">Ninguno por ahora</option>
+                    {rewards.map((option) => (
+                      <option key={option.id} value={String(option.id)}>
+                        {option.nombre} · {option.puntos} puntos
+                      </option>
+                    ))}
+                  </select>
                 </div>
+
+                {reward && (
+                  <div>
+                    <label
+                      htmlFor="reward-code"
+                      className="mb-1.5 block text-xs font-extrabold uppercase tracking-wide text-ink-faint"
+                    >
+                      Tu código
+                    </label>
+                    <input
+                      id="reward-code"
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      maxLength={4}
+                      value={rewardCode}
+                      onChange={(event) =>
+                        setRewardCode(event.target.value.replace(/\D/g, '').slice(0, 4))
+                      }
+                      placeholder="4 dígitos"
+                      className={cn(
+                        'w-full rounded-2xl border-2 bg-white px-4 py-3 text-sm font-semibold tracking-widest text-ink placeholder:font-medium placeholder:tracking-normal placeholder:text-ink-faint focus:outline-none',
+                        errors.rewardCode ? 'border-chili-500' : 'border-line focus:border-brand-400',
+                      )}
+                    />
+                    {errors.rewardCode && (
+                      <p className="mt-1 text-xs font-bold text-chili-600">{errors.rewardCode}</p>
+                    )}
+                  </div>
+                )}
+                <a
+                  href={POINTS_URL}
+                  target="_blank"
+                  rel="noopener"
+                  className="inline-block text-xs font-extrabold text-brand-700 underline"
+                >
+                  Ver mis puntos y mi código ↗
+                </a>
               </div>
-              {(errors.points || errors.pointsCode) && (
-                <p className="text-xs font-bold text-chili-600">
-                  {[errors.points, errors.pointsCode].filter(Boolean).join(' · ')}
-                </p>
-              )}
-              <a
-                href={POINTS_URL}
-                target="_blank"
-                rel="noopener"
-                className="inline-block text-xs font-extrabold text-brand-700 underline"
-              >
-                Ver mis puntos y mi código ↗
-              </a>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
         {activeMethod === 'delivery' && (
           <div>

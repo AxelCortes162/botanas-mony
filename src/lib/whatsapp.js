@@ -16,11 +16,11 @@ export const normalizePhone = (value) => {
  * Enlace que Mony toca cuando ya cobró: tocaaqui lo lee tal cual. Va después
  * del # para que el teléfono y el código no viajen a ningún servidor.
  */
-export const pointsCashierUrl = ({ phone, orderTotal, points, pointsCode, orderId }) => {
-  const params = new URLSearchParams({ tel: phone, total: String(orderTotal) })
-  if (points > 0) {
-    params.set('puntos', String(points))
-    params.set('codigo', pointsCode)
+export const pointsCashierUrl = ({ phone, finalTotal, reward, rewardCode, orderId }) => {
+  const params = new URLSearchParams({ tel: phone, total: String(finalTotal) })
+  if (reward) {
+    params.set('premio', String(reward.id))
+    params.set('codigo', rewardCode)
   }
   params.set('pedido', orderId)
   return `${POINTS_URL}/caja#${params}`
@@ -64,6 +64,12 @@ export const buildOrderMessage = ({ items, subtotal, delivery, payment }) => {
     lines.push('')
   })
 
+  // Va con los productos: es algo más que Mony tiene que preparar
+  if (delivery?.reward) {
+    const { nombre, puntos } = delivery.reward
+    lines.push(`🎁 *PREMIO GRATIS: ${nombre}* (${puntos} puntos · código ${delivery.rewardCode})`, '')
+  }
+
   lines.push(RULE)
 
   if (delivery) {
@@ -77,12 +83,7 @@ export const buildOrderMessage = ({ items, subtotal, delivery, payment }) => {
     lines.push('')
     lines.push(`Subtotal: ${money(subtotal)}`)
     if (delivery.deliveryCost > 0) lines.push(`Envío: ${money(delivery.deliveryCost)}`)
-    if (delivery.points > 0) {
-      lines.push(`🎁 Puntos: −${money(delivery.points)} (código ${delivery.pointsCode})`)
-      lines.push(`💰 *TOTAL A PAGAR: ${money(delivery.finalTotal)}*`)
-    } else {
-      lines.push(`💰 *TOTAL: ${money(delivery.finalTotal)}*`)
-    }
+    lines.push(`💰 *TOTAL: ${money(delivery.finalTotal)}*`)
   } else {
     lines.push(`💰 *TOTAL: ${money(subtotal)}*`)
   }
